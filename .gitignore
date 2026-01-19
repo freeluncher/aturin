@@ -67,3 +67,7 @@ GoogleService-Info.plist
 # Android specific
 .gradle/
 captures/
+
+# Supabase Schema
+supabase/
+

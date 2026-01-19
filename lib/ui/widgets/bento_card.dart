@@ -8,6 +8,7 @@ class BentoCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final double? height;
   final Color? color;
+  final Widget? trailing;
 
   const BentoCard({
     super.key,
@@ -18,6 +19,7 @@ class BentoCard extends StatelessWidget {
     this.padding,
     this.height,
     this.color,
+    this.trailing,
   });
 
   @override
@@ -70,6 +72,10 @@ class BentoCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                      if (trailing != null) ...[
+                        const SizedBox(width: 8),
+                        trailing!,
+                      ],
                     ],
                   ),
                   const SizedBox(height: 16),

@@ -32,4 +32,40 @@ class Project {
     this.isSynced = false,
     this.isDeleted = false,
   });
+
+  Project copyWith({
+    String? id,
+    String? serverId,
+    String? name,
+    String? description,
+    DateTime? createdAt,
+    DateTime? lastUpdated,
+    DateTime? deadline,
+    String? clientName,
+    String? clientContact,
+    double? totalBudget,
+    double? amountPaid,
+    String? techStack,
+    int? status,
+    bool? isSynced,
+    bool? isDeleted,
+  }) {
+    return Project(
+      id: id ?? this.id,
+      serverId: serverId ?? this.serverId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      createdAt: createdAt ?? this.createdAt,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+      deadline: deadline ?? this.deadline,
+      clientName: clientName ?? this.clientName,
+      clientContact: clientContact ?? this.clientContact,
+      totalBudget: totalBudget ?? this.totalBudget,
+      amountPaid: amountPaid ?? this.amountPaid,
+      techStack: techStack ?? this.techStack,
+      status: status ?? this.status,
+      isSynced: isSynced ?? this.isSynced,
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
+  }
 }

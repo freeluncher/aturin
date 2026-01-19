@@ -50,9 +50,20 @@ class Tasks extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class VaultItems extends Table {
+  TextColumn get id => text().clientDefault(() => _uuid.v4())();
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+  TextColumn get category => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 // --- Database ---
 
-@DriftDatabase(tables: [Projects, Tasks])
+@DriftDatabase(tables: [Projects, Tasks, VaultItems])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -60,11 +71,12 @@ class AppDatabase extends _$AppDatabase {
     await transaction(() async {
       await delete(tasks).go();
       await delete(projects).go();
+      await delete(vaultItems).go();
     });
   }
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -76,6 +88,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 2) {
           // We added the 'deadline' column in v2
           await m.addColumn(projects, projects.deadline);
+        }
+        if (from < 3) {
+          // We added the 'VaultItems' table in v3
+          await m.createTable(vaultItems);
         }
       },
     );

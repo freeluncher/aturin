@@ -10,6 +10,7 @@ import '../../widgets/bento_card.dart';
 import '../projects/project_list_screen.dart';
 import '../tasks/task_list_screen.dart';
 import '../projects/add_edit_project_screen.dart';
+import '../vault/vault_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -97,6 +98,10 @@ class _DesktopLayout extends ConsumerWidget {
               NavigationRailDestination(
                 icon: Icon(LucideIcons.checkSquare),
                 label: Text('Tasks'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(LucideIcons.shield),
+                label: Text('Vault'),
               ),
             ],
             trailing: Expanded(

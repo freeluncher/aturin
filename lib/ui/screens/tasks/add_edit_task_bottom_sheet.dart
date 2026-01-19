@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../core/providers.dart';
-import '../../domain/models/task.dart';
+import '../../../core/providers.dart';
+import '../../../domain/models/task.dart';
 
 class AddEditTaskBottomSheet extends ConsumerStatefulWidget {
   final String projectId;

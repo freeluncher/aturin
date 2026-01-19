@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../core/providers.dart';
-import '../../domain/models/project.dart';
+import '../../../core/providers.dart';
+import '../../../domain/models/project.dart';
 
 class AddEditProjectScreen extends ConsumerStatefulWidget {
   final Project? project;
@@ -55,11 +55,18 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
         );
         await ref.read(projectRepositoryProvider).createProject(newProject);
       } else {
-        // Update (Not implemented in repo yet, but for now just log or skip)
-        // TODO: Implement updateProject in repo
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Update not implemented yet')),
+        // Update
+        final updatedProject = Project(
+          id: widget.project!.id,
+          name: _nameController.text.trim(),
+          description: _descController.text.trim(),
+          createdAt: widget.project!.createdAt,
+          lastUpdated: now,
+          serverId: widget.project!.serverId,
+          isSynced: false, // Mark as unsynced so it pushes to server
+          isDeleted: widget.project!.isDeleted,
         );
+        await ref.read(projectRepositoryProvider).updateProject(updatedProject);
       }
 
       if (mounted) Navigator.pop(context);

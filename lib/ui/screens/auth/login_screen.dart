@@ -37,6 +37,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
+
+      // Sync data after successful login (pushes local anonymous data to now-authenticated user account)
+      if (mounted) {
+        final syncService = ref.read(syncServiceProvider);
+        // Fire and forget, or await? Awaiting might delay UI, but cleaner to ensure sync starts.
+        // We'll fire and forget but maybe show a snackbar or just let it happen in background.
+        // Better to await syncUp ensuring local data is safe, then syncDown.
+        // But for UX speed, let's start it and let AuthWrapper handle nav.
+        syncService.syncUp().then((_) => syncService.syncDown());
+      }
+
       // Navigation is handled by AuthWrapper listening to auth state changes
     } catch (e) {
       if (mounted) {

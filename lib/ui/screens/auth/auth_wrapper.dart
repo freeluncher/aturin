@@ -3,14 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
-import '../dashboard_screen.dart';
+import '../dashboard/dashboard_screen.dart';
 import 'login_screen.dart';
 
-class AuthWrapper extends ConsumerWidget {
+class AuthWrapper extends ConsumerStatefulWidget {
   const AuthWrapper({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends ConsumerState<AuthWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize Sync Service Listener
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(syncServiceProvider).initialize();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authStream = ref.watch(authRepositoryProvider).authStateChanges;
 
     return StreamBuilder<User?>(

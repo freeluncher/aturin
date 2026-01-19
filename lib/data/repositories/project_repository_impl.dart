@@ -22,9 +22,12 @@ class ProjectRepositoryImpl implements ProjectRepository {
 
   @override
   Stream<List<domain.Project>> getProjects() {
-    final localStream = _db.select(_db.projects).watch().map((rows) {
-      return rows.map((row) => row.toDomain()).toList();
-    });
+    final localStream =
+        (_db.select(
+          _db.projects,
+        )..where((t) => t.isDeleted.equals(false))).watch().map((rows) {
+          return rows.map((row) => row.toDomain()).toList();
+        });
     // Trigger sync handled by SyncService usually, but keeping existing pattern here specific to this repo if needed.
     // However, since SyncService exists, we should rely on it.
     // For now, I will leave existing logic but redundant sync call might be cleaner to remove if SyncService is the Source of Truth for sync.
@@ -60,11 +63,70 @@ class ProjectRepositoryImpl implements ProjectRepository {
     await _syncFromRemote();
   }
 
+  @override
+  Future<void> updateProject(domain.Project project) async {
+    await (_db.update(
+      _db.projects,
+    )..where((t) => t.id.equals(project.id))).write(project.toCompanion());
+
+    if (await _isOnline()) {
+      try {
+        await _supabase
+            .from('projects')
+            .update({
+              'name': project.name,
+              'description': project.description,
+              'last_updated': DateTime.now().toIso8601String(),
+              'is_deleted': project.isDeleted,
+            })
+            .eq('id', project.id);
+
+        await (_db.update(_db.projects)..where((t) => t.id.equals(project.id)))
+            .write(ProjectsCompanion(isSynced: const Value(true)));
+      } catch (e) {
+        debugPrint('Error syncing updateProject: $e');
+      }
+    }
+  }
+
+  @override
+  Future<void> deleteProject(String projectId) async {
+    // Soft delete
+    await (_db.update(
+      _db.projects,
+    )..where((t) => t.id.equals(projectId))).write(
+      const ProjectsCompanion(
+        isDeleted: Value(true),
+        isSynced: Value(false),
+        lastUpdated: Value.absent(),
+      ),
+    );
+
+    if (await _isOnline()) {
+      try {
+        await _supabase
+            .from('projects')
+            .update({
+              'is_deleted': true,
+              'last_updated': DateTime.now().toIso8601String(),
+            })
+            .eq('id', projectId);
+
+        await (_db.update(_db.projects)..where((t) => t.id.equals(projectId)))
+            .write(ProjectsCompanion(isSynced: const Value(true)));
+      } catch (e) {
+        debugPrint('Error syncing deleteProject: $e');
+      }
+    }
+  }
+
   // --- Tasks ---
 
   @override
   Stream<List<domain.Task>> getTasks(String projectId) {
-    return (_db.select(_db.tasks)..where((t) => t.projectId.equals(projectId)))
+    return (_db.select(_db.tasks)..where(
+          (t) => t.projectId.equals(projectId) & t.isDeleted.equals(false),
+        ))
         .watch()
         .map((rows) => rows.map((row) => row.toDomain()).toList());
   }

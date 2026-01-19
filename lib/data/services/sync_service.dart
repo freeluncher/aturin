@@ -48,6 +48,22 @@ class SyncService {
     }
   }
 
+  StreamSubscription<List<ConnectivityResult>>? _subscription;
+
+  /// Initializes connectivity listener for auto-sync
+  void initialize() {
+    _subscription = Connectivity().onConnectivityChanged.listen((results) {
+      if (!results.contains(ConnectivityResult.none)) {
+        debugPrint('Connection restored. Triggering Auto-Sync...');
+        syncUp().then((_) => syncDown());
+      }
+    });
+  }
+
+  void dispose() {
+    _subscription?.cancel();
+  }
+
   /// Pulls remote changes to local
   Future<void> syncDown() async {
     if (!await isOnline) return;

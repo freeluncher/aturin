@@ -55,6 +55,13 @@ class Tasks extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  Future<void> clearAllData() async {
+    await transaction(() async {
+      await delete(tasks).go();
+      await delete(projects).go();
+    });
+  }
+
   @override
   int get schemaVersion => 1;
 }

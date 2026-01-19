@@ -7,6 +7,8 @@ abstract class ProjectRepository {
   Stream<List<Project>> getProjects();
 
   Future<void> createProject(Project project);
+  Future<void> updateProject(Project project);
+  Future<void> deleteProject(String projectId);
 
   Future<void> syncProjects();
 

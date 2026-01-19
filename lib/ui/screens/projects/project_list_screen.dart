@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-import '../../core/providers.dart';
-import '../../domain/models/project.dart';
-import '../widgets/bento_card.dart';
+import '../../../core/providers.dart';
+import '../../../domain/models/project.dart';
+import '../../widgets/bento_card.dart';
 import 'add_edit_project_screen.dart';
 import 'project_detail_screen.dart';
 
@@ -32,15 +32,12 @@ class ProjectListScreen extends ConsumerWidget {
             return const Center(child: Text('No projects yet. Create one!'));
           }
 
-          // Filter out deleted projects
-          final activeProjects = projects.where((p) => !p.isDeleted).toList();
-
           return ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: activeProjects.length,
+            itemCount: projects.length,
             separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
-              final project = activeProjects[index];
+              final project = projects[index];
               return BentoCard(
                 onTap: () {
                   Navigator.push(

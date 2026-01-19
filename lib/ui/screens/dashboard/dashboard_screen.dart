@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-import '../../core/providers.dart';
-import '../widgets/bento_card.dart';
-import 'project_list_screen.dart';
+import '../../../core/providers.dart';
+import '../../widgets/bento_card.dart';
+import '../projects/project_list_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -55,17 +55,29 @@ class _DesktopLayout extends ConsumerWidget {
                   isActive: true,
                 ),
                 const _SidebarItem(icon: LucideIcons.folder, label: 'Projects'),
-                const _SidebarItem(
-                  icon: LucideIcons.checkSquare,
-                  label: 'Tasks',
+                _SidebarItem(icon: LucideIcons.checkSquare, label: 'Tasks'),
+                _SidebarItem(
+                  icon: LucideIcons.refreshCw,
+                  label: 'Sync Data',
+                  onTap: () {
+                    ref
+                        .read(syncServiceProvider)
+                        .syncUp()
+                        .then((_) => ref.read(syncServiceProvider).syncDown());
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Syncing data...')),
+                    );
+                  },
                 ),
                 const Spacer(),
                 _SidebarItem(
                   icon: LucideIcons.logOut,
                   label: 'Logout',
-                  onTap: () {
-                    ref.read(authRepositoryProvider).signOut();
-                    // AuthWrapper will handle navigation
+                  onTap: () async {
+                    final auth = ref.read(authRepositoryProvider);
+                    final db = ref.read(databaseProvider);
+                    await db.clearAllData();
+                    await auth.signOut();
                   },
                 ),
                 const SizedBox(height: 32),
@@ -184,9 +196,24 @@ class _MobileLayout extends ConsumerWidget {
         title: const Text('Atur.in'),
         actions: [
           IconButton(
-            icon: const Icon(LucideIcons.logOut),
+            icon: const Icon(LucideIcons.refreshCw),
             onPressed: () {
-              ref.read(authRepositoryProvider).signOut();
+              ref
+                  .read(syncServiceProvider)
+                  .syncUp()
+                  .then((_) => ref.read(syncServiceProvider).syncDown());
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Syncing data...')));
+            },
+          ),
+          IconButton(
+            icon: const Icon(LucideIcons.logOut),
+            onPressed: () async {
+              final auth = ref.read(authRepositoryProvider);
+              final db = ref.read(databaseProvider);
+              await db.clearAllData();
+              await auth.signOut();
             },
           ),
         ],

@@ -36,6 +36,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
+
+      // Sync data after registration
+      if (mounted) {
+        final syncService = ref.read(syncServiceProvider);
+        syncService.syncUp().then((_) => syncService.syncDown());
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account created! Please login.')),

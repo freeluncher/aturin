@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:collection/collection.dart';
 
 import '../../../domain/models/project.dart' as domain;
+import '../../../domain/models/task.dart' as domain;
+import '../../../domain/logic/project_analytics.dart'; // Logic Extension
 
 import '../../../core/providers.dart';
 import '../../widgets/bento_card.dart';
@@ -12,6 +15,7 @@ import '../tasks/task_list_screen.dart';
 import '../projects/add_edit_project_screen.dart';
 import '../vault/vault_screen.dart';
 import '../../widgets/connectivity_indicator.dart';
+import '../tasks/add_edit_task_bottom_sheet.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -63,7 +67,6 @@ class _DesktopLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Sync Indicator could be placed here or in AppBar
     return Scaffold(
       body: Row(
         children: [
@@ -79,8 +82,6 @@ class _DesktopLayout extends ConsumerWidget {
               child: FloatingActionButton.extended(
                 heroTag: 'desktop_nav_fab',
                 onPressed: () {
-                  // Navigate to 'Add Project' or show dialog
-                  // Since Create Project is a screen, we might need Navigator
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -89,7 +90,7 @@ class _DesktopLayout extends ConsumerWidget {
                   );
                 },
                 icon: const Icon(LucideIcons.plus),
-                label: const Text('New Project'),
+                label: const Text('Proyek Baru'),
                 elevation: 0,
               ),
             ),
@@ -130,8 +131,6 @@ class _DesktopLayout extends ConsumerWidget {
               ),
             ),
           ),
-          // Divider removed as requested
-          // Main Content
           Expanded(child: _buildContent(selectedIndex)),
         ],
       ),
@@ -169,11 +168,6 @@ class _MobileLayout extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Atur.in'),
         actions: [
-          // Visual Feedback for Sync (Non-intrusive)
-          // We could use a StreamBuilder if we expose sync status.
-          // For now, let's just keep the button but make it spin or give feedback when pressed?
-          // Since user requested "Visual Feedback & Micro-interactions", let's improve this later with a real status.
-          // For now, adding a specialized button.
           IconButton(
             icon: const Icon(LucideIcons.refreshCw),
             tooltip: 'Sync Now',
@@ -181,10 +175,7 @@ class _MobileLayout extends ConsumerWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Syncing in background...')),
               );
-              ref
-                  .read(syncServiceProvider)
-                  .syncUp()
-                  .then((_) => ref.read(syncServiceProvider).syncDown());
+              ref.read(syncServiceProvider).syncUp();
             },
           ),
           IconButton(
@@ -198,13 +189,7 @@ class _MobileLayout extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton:
-          selectedIndex ==
-              1 // Only show FAB on Projects tab? Or Dashboard too? 'Tambah Proyek Baru' suggests context.
-          // But user said "Navigasi Lintas Platform... Penempatan tombol..."
-          // Best practice: FAB on "Projects" tab makes most sense, or global if creates primary entity.
-          // Let's hide it on 'Tasks' or make it create project.
-          // Actually, dashboard often allows "Quick Create". Let's put it there too.
+      floatingActionButton: selectedIndex == 0 || selectedIndex == 1
           ? FloatingActionButton(
               heroTag: 'mobile_dashboard_fab',
               onPressed: () {
@@ -260,210 +245,466 @@ class _MobileLayout extends ConsumerWidget {
 class _DashboardHome extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch streams
+    final allProjects = ref.watch(projectsStreamProvider);
+    final allTasks = ref.watch(allTasksStreamProvider);
+    final isOnlineAsync = ref.watch(connectivityStreamProvider);
+    final isOnline = isOnlineAsync.value ?? false;
+
+    return allProjects.when(
+      data: (projects) {
+        return allTasks.when(
+          data: (tasks) {
+            return _buildDashboardContent(context, projects, tasks, isOnline);
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, s) => Center(child: Text('Error loading tasks: $e')),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, s) => Center(child: Text('Error loading projects: $e')),
+    );
+  }
+
+  Widget _buildDashboardContent(
+    BuildContext context,
+    List<domain.Project> projects,
+    List<domain.Task> tasks,
+    bool isOnline,
+  ) {
     final theme = Theme.of(context);
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Dashboard', style: theme.textTheme.headlineMedium),
-          const SizedBox(height: 24),
-          StaggeredGrid.count(
-            crossAxisCount: 4,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            children: [
-              // 1. URGENCY: Deadline Terdekat (Top Left, 2x1)
-              StaggeredGridTile.count(
-                crossAxisCellCount: 2,
-                mainAxisCellCount: 1,
-                child: StreamBuilder<List<domain.Project>>(
-                  stream: ref.watch(projectRepositoryProvider).getProjects(),
-                  builder: (context, snapshot) {
-                    final projects = snapshot.data ?? [];
-                    final activeProjects = projects
-                        .where((p) => !p.isDeleted)
-                        .toList();
+    final activeProjects = projects
+        .where((p) => !p.isDeleted && p.status != 3)
+        .toList();
 
-                    // Find nearest deadline (future or today)
-                    final now = DateTime.now();
-                    final today = DateTime(now.year, now.month, now.day);
+    // --- 1. Featured Project Logic ---
+    domain.Project? featuredProject;
+    double maxUrgency = -999;
 
-                    final projectsWithDeadlines = activeProjects
-                        .where((p) => p.deadline != null)
-                        .toList();
+    for (var p in activeProjects) {
+      final pTasks = tasks.where((t) => t.projectId == p.id).toList();
+      final urgency = p.getUrgencyScore(pTasks);
+      if (urgency > maxUrgency) {
+        maxUrgency = urgency;
+        featuredProject = p;
+      }
+    }
 
-                    String deadlineText = '-';
-                    Color? textColor;
-                    Color? cardColor;
+    // Default project for Quick Add (Featured -> First Active -> First Available)
+    final defaultProjectId =
+        featuredProject?.id ??
+        (activeProjects.isNotEmpty
+            ? activeProjects.first.id
+            : (projects.isNotEmpty ? projects.first.id : null));
 
-                    if (projectsWithDeadlines.isNotEmpty) {
-                      // Sort by deadline ascending
-                      projectsWithDeadlines.sort(
-                        (a, b) => a.deadline!.compareTo(b.deadline!),
-                      );
+    // --- 2. Financial Overview Logic ---
+    double totalEarned = 0;
+    double totalPending = 0;
+    double totalInvoiced = 0;
 
-                      // Find first future (or today) deadline
-                      final futureDeadlines = projectsWithDeadlines
-                          .where((p) => !p.deadline!.isBefore(today))
-                          .toList();
+    for (var p in projects.where((p) => !p.isDeleted)) {
+      final pTasks = tasks.where((t) => t.projectId == p.id).toList();
+      final financials = p.getFinancials(pTasks);
+      totalEarned += financials.earned;
+      totalPending += financials.pending;
+      totalInvoiced += financials.invoiced;
+    }
 
-                      if (futureDeadlines.isNotEmpty) {
-                        final p = futureDeadlines.first;
-                        final diff = p.deadline!.difference(today).inDays;
+    // --- 3. Workload Summary Logic ---
+    final pendingTasksCount = tasks
+        .where((t) => !t.isCompleted && !t.isDeleted)
+        .length;
+    final completedTasksCount = tasks
+        .where((t) => t.isCompleted && !t.isDeleted)
+        .length;
 
-                        if (diff == 0) {
-                          deadlineText = 'Hari Ini';
-                          textColor = theme.colorScheme.onErrorContainer;
-                          cardColor = theme.colorScheme.errorContainer;
-                        } else if (diff == 1) {
-                          deadlineText = 'Besok';
-                          textColor = theme.colorScheme.onTertiaryContainer;
-                          cardColor = theme.colorScheme.tertiaryContainer;
-                        } else {
-                          deadlineText = '$diff Hari';
-                          if (diff <= 3) {
-                            textColor = theme.colorScheme.onErrorContainer;
-                            cardColor = theme.colorScheme.errorContainer;
-                          }
-                        }
-                        // Optional: show project name?
-                      } else {
-                        // Only past deadlines
-                        deadlineText = 'Semua Lewat';
-                        textColor = theme.colorScheme.error;
-                      }
-                    }
+    // --- 4. Connectivity Status ---
+    final syncStatusText = isOnline ? 'Terhubung ke Cloud' : 'Mode Offline';
+    final syncColor = isOnline ? Colors.green : Colors.grey;
+    final syncIcon = isOnline ? LucideIcons.cloud : LucideIcons.cloudOff;
 
-                    return BentoCard(
-                      title: 'Deadline Terdekat',
-                      icon: LucideIcons.alertTriangle,
-                      color: cardColor,
-                      child: Center(
-                        child: Text(
-                          deadlineText,
-                          style: theme.textTheme.headlineLarge?.copyWith(
-                            color: textColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
+    // Responsive Layout Decision
+    return LayoutBuilder(
+      builder: (context, box) {
+        final isDesktop = box.maxWidth > 900;
+
+        // --- Widget Construction ---
+
+        // Featured Card
+        Widget featuredCard;
+        if (featuredProject != null) {
+          final pTasks = tasks
+              .where((t) => t.projectId == featuredProject!.id)
+              .toList();
+          final health = featuredProject.getHealth(pTasks);
+
+          // Health Badge
+          Color healthColor;
+          String healthText;
+          switch (health) {
+            case ProjectHealthStatus.onTrack:
+              healthColor = Colors.green;
+              healthText = 'On Track';
+              break;
+            case ProjectHealthStatus.atRisk:
+              healthColor = Colors.orange;
+              healthText = 'At Risk';
+              break;
+            case ProjectHealthStatus.behindSchedule:
+              healthColor = Colors.red;
+              healthText = 'Behind';
+              break;
+          }
+
+          // Remaining Days Logic
+          int remainingDays = 0;
+          bool isCritical = false;
+          if (featuredProject.deadline != null) {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            remainingDays = featuredProject.deadline!.difference(today).inDays;
+            if (remainingDays < 3 && remainingDays >= 0) isCritical = true;
+          }
+
+          final deadlineText = featuredProject.deadline == null
+              ? 'No Deadline'
+              : (remainingDays < 0
+                    ? 'Overdue ${remainingDays.abs()} hari'
+                    : 'Sisa $remainingDays Hari');
+
+          final deadlineColor = (remainingDays < 0 || isCritical)
+              ? theme.colorScheme.error
+              : theme.colorScheme.onSurfaceVariant;
+
+          featuredCard = BentoCard(
+            title: 'Featured Project',
+            icon: LucideIcons.star,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  featuredProject.name,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: healthColor.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: healthColor),
+                      ),
+                      child: Text(
+                        healthText,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: healthColor,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
-
-              // 2. CONTEXT: Proyek Aktif (Top Right, 1x1)
-              StaggeredGridTile.count(
-                crossAxisCellCount: 1,
-                mainAxisCellCount: 1,
-                child: StreamBuilder<List<domain.Project>>(
-                  stream: ref.watch(projectRepositoryProvider).getProjects(),
-                  builder: (context, snapshot) {
-                    final count =
-                        snapshot.data?.where((p) => !p.isDeleted).length ?? 0;
-                    return BentoCard(
-                      title: 'Proyek Aktif',
-                      icon: LucideIcons.folderOpen,
-                      child: Center(
-                        child: Text(
-                          '$count',
-                          style: theme.textTheme.displaySmall,
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(LucideIcons.clock, size: 14, color: deadlineColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      deadlineText,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: deadlineColor,
+                        fontWeight: FontWeight.bold,
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
-              ),
-
-              // 3. CONTEXT: Revenue (Top Right, 1x1)
-              StaggeredGridTile.count(
-                crossAxisCellCount: 1,
-                mainAxisCellCount: 1,
-                child: StreamBuilder<List<domain.Project>>(
-                  stream: ref.watch(projectRepositoryProvider).getProjects(),
-                  builder: (context, snapshot) {
-                    final projects = snapshot.data ?? [];
-                    final totalRevenue = projects
-                        .where((p) => !p.isDeleted)
-                        .fold<double>(
-                          0.0,
-                          (sum, item) => sum + item.amountPaid,
-                        );
-
-                    String formattedRevenue;
-                    if (totalRevenue >= 1000000000) {
-                      formattedRevenue =
-                          '${(totalRevenue / 1000000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}M';
-                    } else if (totalRevenue >= 1000000) {
-                      formattedRevenue =
-                          '${(totalRevenue / 1000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}jt';
-                    } else if (totalRevenue >= 1000) {
-                      formattedRevenue =
-                          '${(totalRevenue / 1000).toStringAsFixed(0)}rb';
-                    } else {
-                      formattedRevenue = totalRevenue.toStringAsFixed(0);
-                    }
-
-                    return BentoCard(
-                      title: 'Revenue',
-                      icon: LucideIcons.wallet,
-                      child: Center(
-                        child: Text(
-                          formattedRevenue,
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // 4. ACTIONABLE: Tugas Hari Ini (Bottom, Full Width)
-              StaggeredGridTile.count(
-                crossAxisCellCount: 4,
-                mainAxisCellCount: 2,
-                child: BentoCard(
-                  title: 'Tugas Hari Ini',
-                  icon: LucideIcons.listTodo,
-                  child: StreamBuilder<List<domain.Project>>(
-                    // Ideally fetch tasks directly, but for now mocked or derived
-                    stream: ref.watch(projectRepositoryProvider).getProjects(),
-                    builder: (context, snapshot) {
-                      // Logic to show some tasks.
-                      // Since we don't have 'getAllTasks' stream readily available in this widget scope easily without prop drilling or new provider usage (though we added getTasks to repo),
-                      // let's just show a static list for "Focus" concept as requested, or implement simple list.
-                      // For this iteration, let's keep static but styled better.
-                      return ListView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        children: const [
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text('Revisi Desain App'),
-                            subtitle: Text('Project A • Priority High'),
-                            leading: Icon(LucideIcons.circle, size: 20),
-                          ),
-                          Divider(height: 1),
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text('Meeting Klien B'),
-                            subtitle: Text('Project B • 14:00 WIB'),
-                            leading: Icon(LucideIcons.circle, size: 20),
-                          ),
-                        ],
-                      );
-                    },
+                const SizedBox(height: 12),
+                LinearProgressIndicator(
+                  value: pTasks.isEmpty
+                      ? 0
+                      : pTasks.where((t) => t.isCompleted).length /
+                            pTasks.length,
+                  borderRadius: BorderRadius.circular(4),
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    theme.colorScheme.primary,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  '${pTasks.where((t) => t.isCompleted).length} / ${pTasks.length} Tasks Completed',
+                  style: theme.textTheme.labelSmall,
+                ),
+              ],
+            ),
+          );
+        } else {
+          featuredCard = const BentoCard(
+            title: 'Featured Project',
+            icon: LucideIcons.star,
+            child: Center(child: Text('No active projects')),
+          );
+        }
+
+        // Financial Card
+        final financialCard = BentoCard(
+          title: 'Financial Overview',
+          icon: LucideIcons.pieChart,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildFinanceRow(
+                context,
+                'Earned',
+                totalEarned,
+                Colors.green,
+                LucideIcons.checkCircle,
+              ),
+              const SizedBox(height: 8),
+              _buildFinanceRow(
+                context,
+                'Pending',
+                totalPending,
+                Colors.orange,
+                LucideIcons.clock,
+              ),
+              const SizedBox(height: 8),
+              const Divider(height: 12),
+              _buildFinanceRow(
+                context,
+                'Invoiced',
+                totalInvoiced,
+                theme.colorScheme.primary,
+                LucideIcons.banknote,
+                isBold: true,
               ),
             ],
           ),
-        ],
-      ),
+        );
+
+        // Workload Card
+        final workloadCard = BentoCard(
+          title: 'Workload Summary',
+          icon: LucideIcons.barChart2,
+          trailing: IconButton(
+            icon: const Icon(LucideIcons.plusCircle, size: 20),
+            tooltip: 'Quick Add Task',
+            onPressed: defaultProjectId != null
+                ? () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (context) =>
+                          AddEditTaskBottomSheet(projectId: defaultProjectId!),
+                    );
+                  }
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem(
+                context,
+                '$pendingTasksCount',
+                'Pending',
+                Colors.orange,
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: theme.colorScheme.outlineVariant,
+              ),
+              _buildStatItem(
+                context,
+                '$completedTasksCount',
+                'Done',
+                Colors.green,
+              ),
+            ],
+          ),
+        );
+
+        // Sync Status Bar
+        final syncBar = Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: syncColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: syncColor.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(syncIcon, size: 16, color: syncColor),
+              const SizedBox(width: 8),
+              Text(
+                syncStatusText,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: syncColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              if (!isOnline)
+                Text(
+                  'Data disimpan lokal',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+            ],
+          ),
+        );
+
+        // Desktop Layout (Bento Grid)
+        if (isDesktop) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Dashboard',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                StaggeredGrid.count(
+                  crossAxisCount: 3, // 3 columns
+                  mainAxisSpacing: 24,
+                  crossAxisSpacing: 24,
+                  children: [
+                    // Featured Project: Big (2x2)
+                    StaggeredGridTile.count(
+                      crossAxisCellCount: 2,
+                      mainAxisCellCount: 1,
+                      child: featuredCard,
+                    ),
+                    // Financial: Medium (1x1)
+                    StaggeredGridTile.count(
+                      crossAxisCellCount: 1,
+                      mainAxisCellCount: 1,
+                      child: financialCard,
+                    ),
+                    // Workload: Medium (1x1)
+                    StaggeredGridTile.count(
+                      crossAxisCellCount: 1,
+                      mainAxisCellCount: 1,
+                      child: workloadCard,
+                    ),
+                    // Sync: Full Width (3x0.3)
+                    StaggeredGridTile.count(
+                      crossAxisCellCount: 3,
+                      mainAxisCellCount: 0.3,
+                      child: syncBar,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Mobile Layout (ListView)
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Dashboard',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Featured
+              SizedBox(height: 180, child: featuredCard),
+              const SizedBox(height: 16),
+              // Finance
+              SizedBox(height: 160, child: financialCard),
+              const SizedBox(height: 16),
+              // Workload
+              SizedBox(height: 120, child: workloadCard),
+              const SizedBox(height: 16),
+              syncBar,
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  Widget _buildFinanceRow(
+    BuildContext context,
+    String label,
+    double amount,
+    Color color,
+    IconData icon, {
+    bool isBold = false,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 8),
+            Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          ],
+        ),
+        Text(
+          _formatCurrency(amount),
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            color: isBold ? Theme.of(context).colorScheme.primary : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(
+    BuildContext context,
+    String value,
+    String label,
+    Color color,
+  ) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          value,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: Theme.of(context).colorScheme.outline,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatCurrency(double amount) {
+    if (amount >= 1000000000) {
+      return '${(amount / 1000000000).toStringAsFixed(1)}M';
+    } else if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(1)}jt';
+    } else if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(0)}rb';
+    }
+    return amount.toStringAsFixed(0);
   }
 }

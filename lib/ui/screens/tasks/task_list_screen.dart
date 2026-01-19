@@ -228,18 +228,3 @@ class _TaskItemCard extends ConsumerWidget {
     );
   }
 }
-
-// Temporary Providers for Stream (if not already in core/providers.dart, but using simple ref.watch on repo is also fine)
-// To keep it clean, I'll use simple ref.watch in build method or define local StreamProviders if necessary.
-// Actually, earlier code used `ref.watch(projectRepositoryProvider).getAllTasks()` directly.
-// But use `StreamProvider` is better for efficiency if multiple widgets use it.
-// For now, to match the pattern, I'll define these local helpers or just use Future/StreamBuilder.
-// Let's use StreamBuilder like in ProjectListScreen to be consistent and avoid defining new global providers here if possible.
-
-final allTasksStreamProvider = StreamProvider.autoDispose<List<Task>>((ref) {
-  return ref.watch(projectRepositoryProvider).getAllTasks();
-});
-
-final projectsStreamProvider = StreamProvider.autoDispose<List<Project>>((ref) {
-  return ref.watch(projectRepositoryProvider).getProjects();
-});

@@ -45,6 +45,16 @@ final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
   return VaultRepositoryImpl(db);
 });
 
+// Task Stream Provider
+final allTasksStreamProvider = StreamProvider.autoDispose((ref) {
+  return ref.watch(projectRepositoryProvider).getAllTasks();
+});
+
+// Projects Stream Provider
+final projectsStreamProvider = StreamProvider.autoDispose((ref) {
+  return ref.watch(projectRepositoryProvider).getProjects();
+});
+
 // Connectivity Stream Provider
 // Emits true if online, false if offline
 final connectivityStreamProvider = StreamProvider<bool>((ref) {

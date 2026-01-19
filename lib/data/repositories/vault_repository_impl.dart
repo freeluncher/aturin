@@ -3,7 +3,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:drift/drift.dart';
 
-import '../../core/providers.dart';
 import '../../domain/models/vault_item.dart' as domain;
 import '../../domain/repositories/vault_repository.dart';
 import '../local/app_database.dart';
@@ -130,8 +129,3 @@ class VaultRepositoryImpl implements VaultRepository {
     );
   }
 }
-
-final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
-  final db = ref.watch(databaseProvider);
-  return VaultRepositoryImpl(db);
-});

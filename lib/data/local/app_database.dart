@@ -22,6 +22,21 @@ class Projects extends Table {
       dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get deadline => dateTime().nullable()();
 
+  // New Columns (Phase 1)
+  // Client Info
+  TextColumn get clientName => text().nullable()();
+  TextColumn get clientContact => text().nullable()();
+
+  // Financial Info
+  RealColumn get totalBudget => real().withDefault(const Constant(0.0))();
+  RealColumn get amountPaid => real().withDefault(const Constant(0.0))();
+
+  // Tech Info (JSON)
+  TextColumn get techStack => text().nullable()();
+
+  // Status (0: Planning, 1: Active, 2: Testing, 3: Completed)
+  IntColumn get status => integer().withDefault(const Constant(1))();
+
   // Sync flags
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
@@ -76,7 +91,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -86,12 +101,19 @@ class AppDatabase extends _$AppDatabase {
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
-          // We added the 'deadline' column in v2
           await m.addColumn(projects, projects.deadline);
         }
         if (from < 3) {
-          // We added the 'VaultItems' table in v3
           await m.createTable(vaultItems);
+        }
+        if (from < 4) {
+          // Phase 1 Migration
+          await m.addColumn(projects, projects.clientName);
+          await m.addColumn(projects, projects.clientContact);
+          await m.addColumn(projects, projects.totalBudget);
+          await m.addColumn(projects, projects.amountPaid);
+          await m.addColumn(projects, projects.techStack);
+          await m.addColumn(projects, projects.status);
         }
       },
     );

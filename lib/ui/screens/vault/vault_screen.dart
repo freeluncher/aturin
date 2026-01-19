@@ -9,7 +9,9 @@ import '../../../domain/models/vault_item.dart';
 import '../../widgets/bento_card.dart';
 
 class VaultScreen extends ConsumerWidget {
-  const VaultScreen({super.key});
+  final String? categoryFilter;
+
+  const VaultScreen({super.key, this.categoryFilter});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -17,11 +19,14 @@ class VaultScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Developer Vault'),
+        title: Text(
+          categoryFilter != null ? '$categoryFilter Vault' : 'Developer Vault',
+        ),
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.plus),
-            onPressed: () => showAddEditDialog(context, ref),
+            onPressed: () =>
+                showAddEditDialog(context, ref, null, categoryFilter),
           ),
         ],
       ),
@@ -35,7 +40,12 @@ class VaultScreen extends ConsumerWidget {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
-          final items = snapshot.data ?? [];
+          var items = snapshot.data ?? [];
+
+          // Filter if category is provided
+          if (categoryFilter != null) {
+            items = items.where((i) => i.category == categoryFilter).toList();
+          }
 
           if (items.isEmpty) {
             return Center(
@@ -51,7 +61,8 @@ class VaultScreen extends ConsumerWidget {
                   const Text('Vault is safe... and empty.'),
                   const SizedBox(height: 8),
                   FilledButton.tonalIcon(
-                    onPressed: () => showAddEditDialog(context, ref),
+                    onPressed: () =>
+                        showAddEditDialog(context, ref, null, categoryFilter),
                     icon: const Icon(LucideIcons.plus),
                     label: const Text('Add Secret'),
                   ),
@@ -77,9 +88,13 @@ class VaultScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, [
     VaultItem? existingItem,
+    String? defaultCategory,
   ]) {
     final keyController = TextEditingController(text: existingItem?.key);
     final valueController = TextEditingController(text: existingItem?.value);
+    final categoryController = TextEditingController(
+      text: existingItem?.category ?? defaultCategory,
+    );
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -104,6 +119,13 @@ class VaultScreen extends ConsumerWidget {
                 decoration: const InputDecoration(labelText: 'Value (Secret)'),
                 validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 obscureText: true, // Initially obscured
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: categoryController,
+                decoration: const InputDecoration(
+                  labelText: 'Category (Project Name)',
+                ),
               ),
             ],
           ),
@@ -159,6 +181,9 @@ class VaultScreen extends ConsumerWidget {
                   id: existingItem?.id ?? const Uuid().v4(),
                   key: keyController.text,
                   value: valueController.text,
+                  category: categoryController.text.trim().isEmpty
+                      ? null
+                      : categoryController.text.trim(),
                   createdAt: existingItem?.createdAt ?? DateTime.now(),
                 );
                 ref.read(vaultRepositoryProvider).saveItem(newItem);

@@ -139,6 +139,8 @@ class _DesktopLayout extends ConsumerWidget {
         return const ProjectListScreen();
       case 2:
         return const TaskListScreen();
+      case 3:
+        return const VaultScreen();
       default:
         return _DashboardHome();
     }
@@ -224,6 +226,7 @@ class _MobileLayout extends ConsumerWidget {
             icon: Icon(LucideIcons.checkSquare),
             label: 'Tasks',
           ),
+          NavigationDestination(icon: Icon(LucideIcons.shield), label: 'Vault'),
         ],
       ),
       body: _buildContent(selectedIndex),
@@ -238,6 +241,8 @@ class _MobileLayout extends ConsumerWidget {
         return const ProjectListScreen();
       case 2:
         return const TaskListScreen();
+      case 3:
+        return const VaultScreen();
       default:
         return _DashboardHome();
     }

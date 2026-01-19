@@ -6,6 +6,12 @@ class Project {
   final DateTime createdAt;
   final DateTime lastUpdated;
   final DateTime? deadline;
+  final String? clientName;
+  final String? clientContact;
+  final double totalBudget;
+  final double amountPaid;
+  final String? techStack;
+  final int status;
   final bool isSynced;
   final bool isDeleted;
 
@@ -17,6 +23,12 @@ class Project {
     required this.createdAt,
     required this.lastUpdated,
     this.deadline,
+    this.clientName,
+    this.clientContact,
+    this.totalBudget = 0.0,
+    this.amountPaid = 0.0,
+    this.techStack,
+    this.status = 1, // Default Active
     this.isSynced = false,
     this.isDeleted = false,
   });

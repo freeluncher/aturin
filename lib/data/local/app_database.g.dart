@@ -84,6 +84,73 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _clientNameMeta = const VerificationMeta(
+    'clientName',
+  );
+  @override
+  late final GeneratedColumn<String> clientName = GeneratedColumn<String>(
+    'client_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _clientContactMeta = const VerificationMeta(
+    'clientContact',
+  );
+  @override
+  late final GeneratedColumn<String> clientContact = GeneratedColumn<String>(
+    'client_contact',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalBudgetMeta = const VerificationMeta(
+    'totalBudget',
+  );
+  @override
+  late final GeneratedColumn<double> totalBudget = GeneratedColumn<double>(
+    'total_budget',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _amountPaidMeta = const VerificationMeta(
+    'amountPaid',
+  );
+  @override
+  late final GeneratedColumn<double> amountPaid = GeneratedColumn<double>(
+    'amount_paid',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _techStackMeta = const VerificationMeta(
+    'techStack',
+  );
+  @override
+  late final GeneratedColumn<String> techStack = GeneratedColumn<String>(
+    'tech_stack',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<int> status = GeneratedColumn<int>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   static const VerificationMeta _isSyncedMeta = const VerificationMeta(
     'isSynced',
   );
@@ -123,6 +190,12 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     createdAt,
     lastUpdated,
     deadline,
+    clientName,
+    clientContact,
+    totalBudget,
+    amountPaid,
+    techStack,
+    status,
     isSynced,
     isDeleted,
   ];
@@ -187,6 +260,48 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         deadline.isAcceptableOrUnknown(data['deadline']!, _deadlineMeta),
       );
     }
+    if (data.containsKey('client_name')) {
+      context.handle(
+        _clientNameMeta,
+        clientName.isAcceptableOrUnknown(data['client_name']!, _clientNameMeta),
+      );
+    }
+    if (data.containsKey('client_contact')) {
+      context.handle(
+        _clientContactMeta,
+        clientContact.isAcceptableOrUnknown(
+          data['client_contact']!,
+          _clientContactMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_budget')) {
+      context.handle(
+        _totalBudgetMeta,
+        totalBudget.isAcceptableOrUnknown(
+          data['total_budget']!,
+          _totalBudgetMeta,
+        ),
+      );
+    }
+    if (data.containsKey('amount_paid')) {
+      context.handle(
+        _amountPaidMeta,
+        amountPaid.isAcceptableOrUnknown(data['amount_paid']!, _amountPaidMeta),
+      );
+    }
+    if (data.containsKey('tech_stack')) {
+      context.handle(
+        _techStackMeta,
+        techStack.isAcceptableOrUnknown(data['tech_stack']!, _techStackMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
     if (data.containsKey('is_synced')) {
       context.handle(
         _isSyncedMeta,
@@ -236,6 +351,30 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}deadline'],
       ),
+      clientName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_name'],
+      ),
+      clientContact: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_contact'],
+      ),
+      totalBudget: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_budget'],
+      )!,
+      amountPaid: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount_paid'],
+      )!,
+      techStack: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tech_stack'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}status'],
+      )!,
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
@@ -261,6 +400,12 @@ class Project extends DataClass implements Insertable<Project> {
   final DateTime createdAt;
   final DateTime lastUpdated;
   final DateTime? deadline;
+  final String? clientName;
+  final String? clientContact;
+  final double totalBudget;
+  final double amountPaid;
+  final String? techStack;
+  final int status;
   final bool isSynced;
   final bool isDeleted;
   const Project({
@@ -271,6 +416,12 @@ class Project extends DataClass implements Insertable<Project> {
     required this.createdAt,
     required this.lastUpdated,
     this.deadline,
+    this.clientName,
+    this.clientContact,
+    required this.totalBudget,
+    required this.amountPaid,
+    this.techStack,
+    required this.status,
     required this.isSynced,
     required this.isDeleted,
   });
@@ -288,6 +439,18 @@ class Project extends DataClass implements Insertable<Project> {
     if (!nullToAbsent || deadline != null) {
       map['deadline'] = Variable<DateTime>(deadline);
     }
+    if (!nullToAbsent || clientName != null) {
+      map['client_name'] = Variable<String>(clientName);
+    }
+    if (!nullToAbsent || clientContact != null) {
+      map['client_contact'] = Variable<String>(clientContact);
+    }
+    map['total_budget'] = Variable<double>(totalBudget);
+    map['amount_paid'] = Variable<double>(amountPaid);
+    if (!nullToAbsent || techStack != null) {
+      map['tech_stack'] = Variable<String>(techStack);
+    }
+    map['status'] = Variable<int>(status);
     map['is_synced'] = Variable<bool>(isSynced);
     map['is_deleted'] = Variable<bool>(isDeleted);
     return map;
@@ -306,6 +469,18 @@ class Project extends DataClass implements Insertable<Project> {
       deadline: deadline == null && nullToAbsent
           ? const Value.absent()
           : Value(deadline),
+      clientName: clientName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientName),
+      clientContact: clientContact == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientContact),
+      totalBudget: Value(totalBudget),
+      amountPaid: Value(amountPaid),
+      techStack: techStack == null && nullToAbsent
+          ? const Value.absent()
+          : Value(techStack),
+      status: Value(status),
       isSynced: Value(isSynced),
       isDeleted: Value(isDeleted),
     );
@@ -324,6 +499,12 @@ class Project extends DataClass implements Insertable<Project> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       lastUpdated: serializer.fromJson<DateTime>(json['lastUpdated']),
       deadline: serializer.fromJson<DateTime?>(json['deadline']),
+      clientName: serializer.fromJson<String?>(json['clientName']),
+      clientContact: serializer.fromJson<String?>(json['clientContact']),
+      totalBudget: serializer.fromJson<double>(json['totalBudget']),
+      amountPaid: serializer.fromJson<double>(json['amountPaid']),
+      techStack: serializer.fromJson<String?>(json['techStack']),
+      status: serializer.fromJson<int>(json['status']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
     );
@@ -339,6 +520,12 @@ class Project extends DataClass implements Insertable<Project> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'lastUpdated': serializer.toJson<DateTime>(lastUpdated),
       'deadline': serializer.toJson<DateTime?>(deadline),
+      'clientName': serializer.toJson<String?>(clientName),
+      'clientContact': serializer.toJson<String?>(clientContact),
+      'totalBudget': serializer.toJson<double>(totalBudget),
+      'amountPaid': serializer.toJson<double>(amountPaid),
+      'techStack': serializer.toJson<String?>(techStack),
+      'status': serializer.toJson<int>(status),
       'isSynced': serializer.toJson<bool>(isSynced),
       'isDeleted': serializer.toJson<bool>(isDeleted),
     };
@@ -352,6 +539,12 @@ class Project extends DataClass implements Insertable<Project> {
     DateTime? createdAt,
     DateTime? lastUpdated,
     Value<DateTime?> deadline = const Value.absent(),
+    Value<String?> clientName = const Value.absent(),
+    Value<String?> clientContact = const Value.absent(),
+    double? totalBudget,
+    double? amountPaid,
+    Value<String?> techStack = const Value.absent(),
+    int? status,
     bool? isSynced,
     bool? isDeleted,
   }) => Project(
@@ -362,6 +555,14 @@ class Project extends DataClass implements Insertable<Project> {
     createdAt: createdAt ?? this.createdAt,
     lastUpdated: lastUpdated ?? this.lastUpdated,
     deadline: deadline.present ? deadline.value : this.deadline,
+    clientName: clientName.present ? clientName.value : this.clientName,
+    clientContact: clientContact.present
+        ? clientContact.value
+        : this.clientContact,
+    totalBudget: totalBudget ?? this.totalBudget,
+    amountPaid: amountPaid ?? this.amountPaid,
+    techStack: techStack.present ? techStack.value : this.techStack,
+    status: status ?? this.status,
     isSynced: isSynced ?? this.isSynced,
     isDeleted: isDeleted ?? this.isDeleted,
   );
@@ -378,6 +579,20 @@ class Project extends DataClass implements Insertable<Project> {
           ? data.lastUpdated.value
           : this.lastUpdated,
       deadline: data.deadline.present ? data.deadline.value : this.deadline,
+      clientName: data.clientName.present
+          ? data.clientName.value
+          : this.clientName,
+      clientContact: data.clientContact.present
+          ? data.clientContact.value
+          : this.clientContact,
+      totalBudget: data.totalBudget.present
+          ? data.totalBudget.value
+          : this.totalBudget,
+      amountPaid: data.amountPaid.present
+          ? data.amountPaid.value
+          : this.amountPaid,
+      techStack: data.techStack.present ? data.techStack.value : this.techStack,
+      status: data.status.present ? data.status.value : this.status,
       isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
     );
@@ -393,6 +608,12 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('createdAt: $createdAt, ')
           ..write('lastUpdated: $lastUpdated, ')
           ..write('deadline: $deadline, ')
+          ..write('clientName: $clientName, ')
+          ..write('clientContact: $clientContact, ')
+          ..write('totalBudget: $totalBudget, ')
+          ..write('amountPaid: $amountPaid, ')
+          ..write('techStack: $techStack, ')
+          ..write('status: $status, ')
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted')
           ..write(')'))
@@ -408,6 +629,12 @@ class Project extends DataClass implements Insertable<Project> {
     createdAt,
     lastUpdated,
     deadline,
+    clientName,
+    clientContact,
+    totalBudget,
+    amountPaid,
+    techStack,
+    status,
     isSynced,
     isDeleted,
   );
@@ -422,6 +649,12 @@ class Project extends DataClass implements Insertable<Project> {
           other.createdAt == this.createdAt &&
           other.lastUpdated == this.lastUpdated &&
           other.deadline == this.deadline &&
+          other.clientName == this.clientName &&
+          other.clientContact == this.clientContact &&
+          other.totalBudget == this.totalBudget &&
+          other.amountPaid == this.amountPaid &&
+          other.techStack == this.techStack &&
+          other.status == this.status &&
           other.isSynced == this.isSynced &&
           other.isDeleted == this.isDeleted);
 }
@@ -434,6 +667,12 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<DateTime> createdAt;
   final Value<DateTime> lastUpdated;
   final Value<DateTime?> deadline;
+  final Value<String?> clientName;
+  final Value<String?> clientContact;
+  final Value<double> totalBudget;
+  final Value<double> amountPaid;
+  final Value<String?> techStack;
+  final Value<int> status;
   final Value<bool> isSynced;
   final Value<bool> isDeleted;
   final Value<int> rowid;
@@ -445,6 +684,12 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.createdAt = const Value.absent(),
     this.lastUpdated = const Value.absent(),
     this.deadline = const Value.absent(),
+    this.clientName = const Value.absent(),
+    this.clientContact = const Value.absent(),
+    this.totalBudget = const Value.absent(),
+    this.amountPaid = const Value.absent(),
+    this.techStack = const Value.absent(),
+    this.status = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -457,6 +702,12 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.createdAt = const Value.absent(),
     this.lastUpdated = const Value.absent(),
     this.deadline = const Value.absent(),
+    this.clientName = const Value.absent(),
+    this.clientContact = const Value.absent(),
+    this.totalBudget = const Value.absent(),
+    this.amountPaid = const Value.absent(),
+    this.techStack = const Value.absent(),
+    this.status = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -470,6 +721,12 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? lastUpdated,
     Expression<DateTime>? deadline,
+    Expression<String>? clientName,
+    Expression<String>? clientContact,
+    Expression<double>? totalBudget,
+    Expression<double>? amountPaid,
+    Expression<String>? techStack,
+    Expression<int>? status,
     Expression<bool>? isSynced,
     Expression<bool>? isDeleted,
     Expression<int>? rowid,
@@ -482,6 +739,12 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       if (createdAt != null) 'created_at': createdAt,
       if (lastUpdated != null) 'last_updated': lastUpdated,
       if (deadline != null) 'deadline': deadline,
+      if (clientName != null) 'client_name': clientName,
+      if (clientContact != null) 'client_contact': clientContact,
+      if (totalBudget != null) 'total_budget': totalBudget,
+      if (amountPaid != null) 'amount_paid': amountPaid,
+      if (techStack != null) 'tech_stack': techStack,
+      if (status != null) 'status': status,
       if (isSynced != null) 'is_synced': isSynced,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (rowid != null) 'rowid': rowid,
@@ -496,6 +759,12 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Value<DateTime>? createdAt,
     Value<DateTime>? lastUpdated,
     Value<DateTime?>? deadline,
+    Value<String?>? clientName,
+    Value<String?>? clientContact,
+    Value<double>? totalBudget,
+    Value<double>? amountPaid,
+    Value<String?>? techStack,
+    Value<int>? status,
     Value<bool>? isSynced,
     Value<bool>? isDeleted,
     Value<int>? rowid,
@@ -508,6 +777,12 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       createdAt: createdAt ?? this.createdAt,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       deadline: deadline ?? this.deadline,
+      clientName: clientName ?? this.clientName,
+      clientContact: clientContact ?? this.clientContact,
+      totalBudget: totalBudget ?? this.totalBudget,
+      amountPaid: amountPaid ?? this.amountPaid,
+      techStack: techStack ?? this.techStack,
+      status: status ?? this.status,
       isSynced: isSynced ?? this.isSynced,
       isDeleted: isDeleted ?? this.isDeleted,
       rowid: rowid ?? this.rowid,
@@ -538,6 +813,24 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (deadline.present) {
       map['deadline'] = Variable<DateTime>(deadline.value);
     }
+    if (clientName.present) {
+      map['client_name'] = Variable<String>(clientName.value);
+    }
+    if (clientContact.present) {
+      map['client_contact'] = Variable<String>(clientContact.value);
+    }
+    if (totalBudget.present) {
+      map['total_budget'] = Variable<double>(totalBudget.value);
+    }
+    if (amountPaid.present) {
+      map['amount_paid'] = Variable<double>(amountPaid.value);
+    }
+    if (techStack.present) {
+      map['tech_stack'] = Variable<String>(techStack.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<int>(status.value);
+    }
     if (isSynced.present) {
       map['is_synced'] = Variable<bool>(isSynced.value);
     }
@@ -560,6 +853,12 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('createdAt: $createdAt, ')
           ..write('lastUpdated: $lastUpdated, ')
           ..write('deadline: $deadline, ')
+          ..write('clientName: $clientName, ')
+          ..write('clientContact: $clientContact, ')
+          ..write('totalBudget: $totalBudget, ')
+          ..write('amountPaid: $amountPaid, ')
+          ..write('techStack: $techStack, ')
+          ..write('status: $status, ')
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('rowid: $rowid')
@@ -1575,6 +1874,12 @@ typedef $$ProjectsTableCreateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime> lastUpdated,
       Value<DateTime?> deadline,
+      Value<String?> clientName,
+      Value<String?> clientContact,
+      Value<double> totalBudget,
+      Value<double> amountPaid,
+      Value<String?> techStack,
+      Value<int> status,
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -1588,6 +1893,12 @@ typedef $$ProjectsTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime> lastUpdated,
       Value<DateTime?> deadline,
+      Value<String?> clientName,
+      Value<String?> clientContact,
+      Value<double> totalBudget,
+      Value<double> amountPaid,
+      Value<String?> techStack,
+      Value<int> status,
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -1658,6 +1969,36 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<DateTime> get deadline => $composableBuilder(
     column: $table.deadline,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clientName => $composableBuilder(
+    column: $table.clientName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clientContact => $composableBuilder(
+    column: $table.clientContact,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalBudget => $composableBuilder(
+    column: $table.totalBudget,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amountPaid => $composableBuilder(
+    column: $table.amountPaid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get techStack => $composableBuilder(
+    column: $table.techStack,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get status => $composableBuilder(
+    column: $table.status,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1741,6 +2082,36 @@ class $$ProjectsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get clientName => $composableBuilder(
+    column: $table.clientName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get clientContact => $composableBuilder(
+    column: $table.clientContact,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalBudget => $composableBuilder(
+    column: $table.totalBudget,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amountPaid => $composableBuilder(
+    column: $table.amountPaid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get techStack => $composableBuilder(
+    column: $table.techStack,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isSynced => $composableBuilder(
     column: $table.isSynced,
     builder: (column) => ColumnOrderings(column),
@@ -1785,6 +2156,32 @@ class $$ProjectsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get deadline =>
       $composableBuilder(column: $table.deadline, builder: (column) => column);
+
+  GeneratedColumn<String> get clientName => $composableBuilder(
+    column: $table.clientName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get clientContact => $composableBuilder(
+    column: $table.clientContact,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get totalBudget => $composableBuilder(
+    column: $table.totalBudget,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get amountPaid => $composableBuilder(
+    column: $table.amountPaid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get techStack =>
+      $composableBuilder(column: $table.techStack, builder: (column) => column);
+
+  GeneratedColumn<int> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
 
   GeneratedColumn<bool> get isSynced =>
       $composableBuilder(column: $table.isSynced, builder: (column) => column);
@@ -1853,6 +2250,12 @@ class $$ProjectsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastUpdated = const Value.absent(),
                 Value<DateTime?> deadline = const Value.absent(),
+                Value<String?> clientName = const Value.absent(),
+                Value<String?> clientContact = const Value.absent(),
+                Value<double> totalBudget = const Value.absent(),
+                Value<double> amountPaid = const Value.absent(),
+                Value<String?> techStack = const Value.absent(),
+                Value<int> status = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -1864,6 +2267,12 @@ class $$ProjectsTableTableManager
                 createdAt: createdAt,
                 lastUpdated: lastUpdated,
                 deadline: deadline,
+                clientName: clientName,
+                clientContact: clientContact,
+                totalBudget: totalBudget,
+                amountPaid: amountPaid,
+                techStack: techStack,
+                status: status,
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 rowid: rowid,
@@ -1877,6 +2286,12 @@ class $$ProjectsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastUpdated = const Value.absent(),
                 Value<DateTime?> deadline = const Value.absent(),
+                Value<String?> clientName = const Value.absent(),
+                Value<String?> clientContact = const Value.absent(),
+                Value<double> totalBudget = const Value.absent(),
+                Value<double> amountPaid = const Value.absent(),
+                Value<String?> techStack = const Value.absent(),
+                Value<int> status = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -1888,6 +2303,12 @@ class $$ProjectsTableTableManager
                 createdAt: createdAt,
                 lastUpdated: lastUpdated,
                 deadline: deadline,
+                clientName: clientName,
+                clientContact: clientContact,
+                totalBudget: totalBudget,
+                amountPaid: amountPaid,
+                techStack: techStack,
+                status: status,
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 rowid: rowid,

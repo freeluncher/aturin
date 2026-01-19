@@ -33,7 +33,14 @@ class SyncService {
         await _syncUpProject(project);
       }
 
-      // TODO: Add Sync Tasks here
+      // 2. Sync Tasks
+      final unsyncedTasks = await (_db.select(
+        _db.tasks,
+      )..where((t) => t.isSynced.equals(false))).get();
+
+      for (var task in unsyncedTasks) {
+        await _syncUpTask(task);
+      }
 
       debugPrint('SyncUp completed');
     } catch (e) {
@@ -49,7 +56,8 @@ class SyncService {
       // 1. Sync Projects Down
       await _syncDownProjects();
 
-      // TODO: Add Sync Tasks Down here
+      // 2. Sync Tasks Down
+      await _syncDownTasks();
 
       debugPrint('SyncDown completed');
     } catch (e) {
@@ -71,10 +79,8 @@ class SyncService {
         'is_deleted': project.isDeleted,
       };
 
-      // Upsert to Supabase
       await _supabase.from('projects').upsert(data);
 
-      // Mark as synced locally
       await (_db.update(_db.projects)..where((t) => t.id.equals(project.id)))
           .write(ProjectsCompanion(isSynced: const Value(true)));
     } catch (e) {
@@ -83,10 +89,6 @@ class SyncService {
   }
 
   Future<void> _syncDownProjects() async {
-    // Get latest local update time to limit fetch range (optimization)
-    // For simplicity, we just fetch all or a large window for now,
-    // or we could track a 'lastSyncTime' preference.
-
     final response = await _supabase.from('projects').select();
     final remoteProjects = response as List<dynamic>;
 
@@ -99,7 +101,6 @@ class SyncService {
       )..where((t) => t.id.equals(id))).getSingleOrNull();
 
       if (localProject == null) {
-        // Insert new from server
         await _db
             .into(_db.projects)
             .insert(
@@ -115,14 +116,96 @@ class SyncService {
               ),
             );
       } else {
-        // Conflict Resolution: Server Wins if newer
         if (serverUpdatedAt.isAfter(localProject.lastUpdated)) {
           await (_db.update(_db.projects)..where((t) => t.id.equals(id))).write(
             ProjectsCompanion(
               name: Value(data['name'] as String),
               description: Value(data['description'] as String),
               lastUpdated: Value(serverUpdatedAt),
-              isSynced: const Value(true), // We are now in sync with server
+              isSynced: const Value(true),
+              isDeleted: Value(data['is_deleted'] as bool? ?? false),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // --- Task Sync Logic ---
+
+  Future<void> _syncUpTask(Task task) async {
+    try {
+      final data = {
+        'id': task.id,
+        'project_id': task.projectId,
+        'title': task.title,
+        'description': task.description,
+        'is_completed': task.isCompleted,
+        'created_at': task.createdAt.toIso8601String(),
+        'last_updated': task.lastUpdated.toIso8601String(),
+        'is_deleted': task.isDeleted,
+      };
+
+      await _supabase.from('tasks').upsert(data);
+
+      await (_db.update(_db.tasks)..where((t) => t.id.equals(task.id))).write(
+        TasksCompanion(isSynced: const Value(true)),
+      );
+    } catch (e) {
+      debugPrint('Failed to sync up task ${task.id}: $e');
+    }
+  }
+
+  Future<void> _syncDownTasks() async {
+    final response = await _supabase.from('tasks').select();
+    final remoteTasks = response as List<dynamic>;
+
+    for (var data in remoteTasks) {
+      final id = data['id'] as String;
+      final projectId = data['project_id'] as String;
+      final serverUpdatedAt = DateTime.parse(data['last_updated'] as String);
+
+      // Verify project exists locally to satisfy FK
+      final projectExists = await (_db.select(
+        _db.projects,
+      )..where((t) => t.id.equals(projectId))).getSingleOrNull();
+
+      if (projectExists == null) {
+        // Skip task if project doesn't exist locally yet
+        // (Should be rare as we sync projects first, but robustness check)
+        continue;
+      }
+
+      final localTask = await (_db.select(
+        _db.tasks,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
+
+      if (localTask == null) {
+        await _db
+            .into(_db.tasks)
+            .insert(
+              TasksCompanion.insert(
+                id: Value(id),
+                serverId: Value(id),
+                projectId: projectId,
+                title: data['title'] as String,
+                description: Value(data['description'] as String?),
+                isCompleted: Value(data['is_completed'] as bool? ?? false),
+                createdAt: Value(DateTime.parse(data['created_at'] as String)),
+                lastUpdated: Value(serverUpdatedAt),
+                isSynced: const Value(true),
+                isDeleted: Value(data['is_deleted'] as bool? ?? false),
+              ),
+            );
+      } else {
+        if (serverUpdatedAt.isAfter(localTask.lastUpdated)) {
+          await (_db.update(_db.tasks)..where((t) => t.id.equals(id))).write(
+            TasksCompanion(
+              title: Value(data['title'] as String),
+              description: Value(data['description'] as String?),
+              isCompleted: Value(data['is_completed'] as bool? ?? false),
+              lastUpdated: Value(serverUpdatedAt),
+              isSynced: const Value(true),
               isDeleted: Value(data['is_deleted'] as bool? ?? false),
             ),
           );

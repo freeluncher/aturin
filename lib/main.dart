@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/supabase_config.dart';
 import 'ui/screens/dashboard_screen.dart';
 
 void main() async {
   // Ensure widgets are initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load env (silently ignore if file not found to prevent crash on fresh clone without .env)
+  // Initialize Supabase (loads .env internally)
   try {
-    await dotenv.load(fileName: ".env");
+    await SupabaseConfig.initialize();
   } catch (e) {
-    debugPrint(
-      "Warning: .env file not found or empty. Using default/empty env vars.",
-    );
+    debugPrint("Warning: Supabase initialization failed: $e");
+    // We might want to allow running even if Supabase fails (offline mode),
+    // but providers depending on SupabaseClient inside SupabaseConfig might be null logic wise if we don't catch it right.
+    // Actually SupabaseConfig.initialize throws exception if keys missing.
   }
 
   runApp(const ProviderScope(child: MainApp()));

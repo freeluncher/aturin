@@ -3,6 +3,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../widgets/bento_card.dart';
+import 'project_list_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -91,6 +92,12 @@ class _DesktopLayout extends StatelessWidget {
                         crossAxisCellCount: 1,
                         mainAxisCellCount: 1,
                         child: BentoCard(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ProjectListScreen(),
+                            ),
+                          ),
                           title: 'Proyek Aktif',
                           icon: LucideIcons.briefcase,
                           child: Center(
@@ -199,6 +206,12 @@ class _MobileLayout extends StatelessWidget {
               children: [
                 Expanded(
                   child: BentoCard(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ProjectListScreen(),
+                      ),
+                    ),
                     title: 'Proyek Aktif',
                     icon: LucideIcons.briefcase,
                     height: 150,

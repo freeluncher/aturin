@@ -1,4 +1,5 @@
 import '../models/project.dart';
+import '../models/task.dart';
 
 abstract class ProjectRepository {
   /// Returns a stream of projects from the local database.
@@ -8,4 +9,10 @@ abstract class ProjectRepository {
   Future<void> createProject(Project project);
 
   Future<void> syncProjects();
+
+  // Task Operations
+  Stream<List<Task>> getTasks(String projectId);
+  Future<void> createTask(Task task);
+  Future<void> updateTask(Task task);
+  Future<void> deleteTask(String taskId);
 }

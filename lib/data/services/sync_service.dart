@@ -279,21 +279,34 @@ class SyncService {
 
   Future<void> _syncUpVault(VaultItem item) async {
     try {
-      final data = {
-        'id': item.id,
-        'user_id': _supabase.auth.currentUser?.id,
-        'key': item.key,
-        'value': item.value, // This is already encrypted in DB
-        'category': item.category,
-        'project_id': item.projectId,
-        'created_at': item.createdAt.toIso8601String(),
-        'is_deleted': item.isDeleted,
-      };
+      if (item.isDeleted) {
+        // HARD DELETE Strategy:
+        // User requested permanent removal.
+        // 1. Delete from Server
+        await _supabase.from('vault_items').delete().eq('id', item.id);
 
-      await _supabase.from('vault_items').upsert(data);
+        // 2. Delete from Local (Physical delete, no tombstone)
+        await _db
+            .delete(_db.vaultItems)
+            .delete(VaultItemsCompanion(id: Value(item.id)));
+      } else {
+        // Standard Upsert
+        final data = {
+          'id': item.id,
+          'user_id': _supabase.auth.currentUser?.id,
+          'key': item.key,
+          'value': item.value,
+          'category': item.category,
+          'project_id': item.projectId,
+          'created_at': item.createdAt.toIso8601String(),
+          'is_deleted': false, // Ensure server knows it's active
+        };
 
-      await (_db.update(_db.vaultItems)..where((t) => t.id.equals(item.id)))
-          .write(VaultItemsCompanion(isSynced: const Value(true)));
+        await _supabase.from('vault_items').upsert(data);
+
+        await (_db.update(_db.vaultItems)..where((t) => t.id.equals(item.id)))
+            .write(VaultItemsCompanion(isSynced: const Value(true)));
+      }
     } catch (e) {
       debugPrint('Failed to sync up vault item ${item.id}: $e');
     }
@@ -303,11 +316,11 @@ class SyncService {
     try {
       final response = await _supabase.from('vault_items').select();
       final remoteItems = response as List<dynamic>;
+      final remoteIds = <String>{};
 
       for (var data in remoteItems) {
         final id = data['id'] as String;
-        // Vault items usually don't have last_updated in this schema (simplified)
-        // We'll trust server if it exists.
+        remoteIds.add(id);
 
         final localItem = await (_db.select(
           _db.vaultItems,
@@ -320,7 +333,7 @@ class SyncService {
                 VaultItemsCompanion.insert(
                   id: Value(id),
                   key: data['key'] as String,
-                  value: data['value'] as String, // Encrypted from server
+                  value: data['value'] as String,
                   category: Value(data['category'] as String?),
                   projectId: Value(data['project_id'] as String?),
                   serverId: Value(id),
@@ -328,12 +341,13 @@ class SyncService {
                     DateTime.parse(data['created_at'] as String),
                   ),
                   isSynced: const Value(true),
-                  isDeleted: Value(data['is_deleted'] as bool? ?? false),
+                  isDeleted: const Value(false),
                 ),
               );
         } else {
-          // If exists, overwrite with server data (assuming server is source of truth for now)
-          // ideally check timestamps or versions if strictly needed.
+          // If exists, overwrite with server data
+          // Only update if not locally modified/deleted pending sync
+          // Simple logic: Server wins
           await (_db.update(
             _db.vaultItems,
           )..where((t) => t.id.equals(id))).write(
@@ -343,9 +357,26 @@ class SyncService {
               category: Value(data['category'] as String?),
               projectId: Value(data['project_id'] as String?),
               isSynced: const Value(true),
-              isDeleted: Value(data['is_deleted'] as bool? ?? false),
+              isDeleted: const Value(false),
             ),
           );
+        }
+      }
+
+      // Hard Delete Propagation:
+      // If a local item is marked as 'Synced' but is MISSING from server,
+      // it means it was Hard Deleted on another device. We should delete it too.
+      // We do NOT delete items that are !isSynced (pending push).
+      final allLocalSynced = await (_db.select(
+        _db.vaultItems,
+      )..where((t) => t.isSynced.equals(true))).get();
+
+      for (var local in allLocalSynced) {
+        if (!remoteIds.contains(local.id)) {
+          debugPrint('Deleting orphaned vault item: ${local.id}');
+          await _db
+              .delete(_db.vaultItems)
+              .delete(VaultItemsCompanion(id: Value(local.id)));
         }
       }
     } catch (e) {

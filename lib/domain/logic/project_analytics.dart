@@ -62,14 +62,32 @@ extension ProjectAnalytics on Project {
   /// Logic:
   /// - Earned: Estimasi nilai kerja yang sudah selesai (Budget * Progress).
   /// - Pending: Sisa budget dari pekerjaan yang belum selesai (Budget - Earned).
-  /// - Invoiced: Menggunakan field `amountPaid` sebagai representasi tagihan yang sudah diproses/dibayar.
-  ///   (Catatan: Idealnya ada tabel Invoice terpisah untuk 'tagihan terkirim' vs 'terbayar').
-  FinancialBreakdown getFinancials(List<Task> tasks) {
+  /// - Invoiced: Total dari semua Invoice yang berstatus 'Paid'.
+  FinancialBreakdown getFinancials(
+    List<Task> tasks, {
+    List<dynamic> invoices = const [],
+  }) {
+    // Note: 'invoices' parameter is dynamic here to avoid heavy dependency issues
+    // if 'Invoice' type is not available in domain/models/project.dart context yet.
+    // In strict architecture, we should map database 'Invoice' to domain 'Invoice'.
+    // For now assuming existing drift class or domain class is compatible if passed.
+
+    // Calculate total invoiced (Paid status)
+    double totalPaid = 0;
+    for (var inv in invoices) {
+      // Assuming Invoice object has 'status' and 'amount'
+      // Check if status is 'Paid' (case insensitive or exact string)
+      final status = (inv.status as String).toLowerCase();
+      if (status == 'paid') {
+        totalPaid += (inv.amount as double);
+      }
+    }
+
     if (tasks.isEmpty) {
       return FinancialBreakdown(
         earned: 0,
         pending: totalBudget,
-        invoiced: amountPaid,
+        invoiced: totalPaid,
       );
     }
 
@@ -82,7 +100,7 @@ extension ProjectAnalytics on Project {
     return FinancialBreakdown(
       earned: earned,
       pending: pending,
-      invoiced: amountPaid,
+      invoiced: totalPaid,
     );
   }
 

@@ -118,18 +118,6 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0.0),
   );
-  static const VerificationMeta _amountPaidMeta = const VerificationMeta(
-    'amountPaid',
-  );
-  @override
-  late final GeneratedColumn<double> amountPaid = GeneratedColumn<double>(
-    'amount_paid',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0.0),
-  );
   static const VerificationMeta _techStackMeta = const VerificationMeta(
     'techStack',
   );
@@ -193,7 +181,6 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     clientName,
     clientContact,
     totalBudget,
-    amountPaid,
     techStack,
     status,
     isSynced,
@@ -284,12 +271,6 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         ),
       );
     }
-    if (data.containsKey('amount_paid')) {
-      context.handle(
-        _amountPaidMeta,
-        amountPaid.isAcceptableOrUnknown(data['amount_paid']!, _amountPaidMeta),
-      );
-    }
     if (data.containsKey('tech_stack')) {
       context.handle(
         _techStackMeta,
@@ -363,10 +344,6 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         DriftSqlType.double,
         data['${effectivePrefix}total_budget'],
       )!,
-      amountPaid: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}amount_paid'],
-      )!,
       techStack: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}tech_stack'],
@@ -403,7 +380,6 @@ class Project extends DataClass implements Insertable<Project> {
   final String? clientName;
   final String? clientContact;
   final double totalBudget;
-  final double amountPaid;
   final String? techStack;
   final int status;
   final bool isSynced;
@@ -419,7 +395,6 @@ class Project extends DataClass implements Insertable<Project> {
     this.clientName,
     this.clientContact,
     required this.totalBudget,
-    required this.amountPaid,
     this.techStack,
     required this.status,
     required this.isSynced,
@@ -446,7 +421,6 @@ class Project extends DataClass implements Insertable<Project> {
       map['client_contact'] = Variable<String>(clientContact);
     }
     map['total_budget'] = Variable<double>(totalBudget);
-    map['amount_paid'] = Variable<double>(amountPaid);
     if (!nullToAbsent || techStack != null) {
       map['tech_stack'] = Variable<String>(techStack);
     }
@@ -476,7 +450,6 @@ class Project extends DataClass implements Insertable<Project> {
           ? const Value.absent()
           : Value(clientContact),
       totalBudget: Value(totalBudget),
-      amountPaid: Value(amountPaid),
       techStack: techStack == null && nullToAbsent
           ? const Value.absent()
           : Value(techStack),
@@ -502,7 +475,6 @@ class Project extends DataClass implements Insertable<Project> {
       clientName: serializer.fromJson<String?>(json['clientName']),
       clientContact: serializer.fromJson<String?>(json['clientContact']),
       totalBudget: serializer.fromJson<double>(json['totalBudget']),
-      amountPaid: serializer.fromJson<double>(json['amountPaid']),
       techStack: serializer.fromJson<String?>(json['techStack']),
       status: serializer.fromJson<int>(json['status']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
@@ -523,7 +495,6 @@ class Project extends DataClass implements Insertable<Project> {
       'clientName': serializer.toJson<String?>(clientName),
       'clientContact': serializer.toJson<String?>(clientContact),
       'totalBudget': serializer.toJson<double>(totalBudget),
-      'amountPaid': serializer.toJson<double>(amountPaid),
       'techStack': serializer.toJson<String?>(techStack),
       'status': serializer.toJson<int>(status),
       'isSynced': serializer.toJson<bool>(isSynced),
@@ -542,7 +513,6 @@ class Project extends DataClass implements Insertable<Project> {
     Value<String?> clientName = const Value.absent(),
     Value<String?> clientContact = const Value.absent(),
     double? totalBudget,
-    double? amountPaid,
     Value<String?> techStack = const Value.absent(),
     int? status,
     bool? isSynced,
@@ -560,7 +530,6 @@ class Project extends DataClass implements Insertable<Project> {
         ? clientContact.value
         : this.clientContact,
     totalBudget: totalBudget ?? this.totalBudget,
-    amountPaid: amountPaid ?? this.amountPaid,
     techStack: techStack.present ? techStack.value : this.techStack,
     status: status ?? this.status,
     isSynced: isSynced ?? this.isSynced,
@@ -588,9 +557,6 @@ class Project extends DataClass implements Insertable<Project> {
       totalBudget: data.totalBudget.present
           ? data.totalBudget.value
           : this.totalBudget,
-      amountPaid: data.amountPaid.present
-          ? data.amountPaid.value
-          : this.amountPaid,
       techStack: data.techStack.present ? data.techStack.value : this.techStack,
       status: data.status.present ? data.status.value : this.status,
       isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
@@ -611,7 +577,6 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('clientName: $clientName, ')
           ..write('clientContact: $clientContact, ')
           ..write('totalBudget: $totalBudget, ')
-          ..write('amountPaid: $amountPaid, ')
           ..write('techStack: $techStack, ')
           ..write('status: $status, ')
           ..write('isSynced: $isSynced, ')
@@ -632,7 +597,6 @@ class Project extends DataClass implements Insertable<Project> {
     clientName,
     clientContact,
     totalBudget,
-    amountPaid,
     techStack,
     status,
     isSynced,
@@ -652,7 +616,6 @@ class Project extends DataClass implements Insertable<Project> {
           other.clientName == this.clientName &&
           other.clientContact == this.clientContact &&
           other.totalBudget == this.totalBudget &&
-          other.amountPaid == this.amountPaid &&
           other.techStack == this.techStack &&
           other.status == this.status &&
           other.isSynced == this.isSynced &&
@@ -670,7 +633,6 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<String?> clientName;
   final Value<String?> clientContact;
   final Value<double> totalBudget;
-  final Value<double> amountPaid;
   final Value<String?> techStack;
   final Value<int> status;
   final Value<bool> isSynced;
@@ -687,7 +649,6 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.clientName = const Value.absent(),
     this.clientContact = const Value.absent(),
     this.totalBudget = const Value.absent(),
-    this.amountPaid = const Value.absent(),
     this.techStack = const Value.absent(),
     this.status = const Value.absent(),
     this.isSynced = const Value.absent(),
@@ -705,7 +666,6 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.clientName = const Value.absent(),
     this.clientContact = const Value.absent(),
     this.totalBudget = const Value.absent(),
-    this.amountPaid = const Value.absent(),
     this.techStack = const Value.absent(),
     this.status = const Value.absent(),
     this.isSynced = const Value.absent(),
@@ -724,7 +684,6 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Expression<String>? clientName,
     Expression<String>? clientContact,
     Expression<double>? totalBudget,
-    Expression<double>? amountPaid,
     Expression<String>? techStack,
     Expression<int>? status,
     Expression<bool>? isSynced,
@@ -742,7 +701,6 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       if (clientName != null) 'client_name': clientName,
       if (clientContact != null) 'client_contact': clientContact,
       if (totalBudget != null) 'total_budget': totalBudget,
-      if (amountPaid != null) 'amount_paid': amountPaid,
       if (techStack != null) 'tech_stack': techStack,
       if (status != null) 'status': status,
       if (isSynced != null) 'is_synced': isSynced,
@@ -762,7 +720,6 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Value<String?>? clientName,
     Value<String?>? clientContact,
     Value<double>? totalBudget,
-    Value<double>? amountPaid,
     Value<String?>? techStack,
     Value<int>? status,
     Value<bool>? isSynced,
@@ -780,7 +737,6 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       clientName: clientName ?? this.clientName,
       clientContact: clientContact ?? this.clientContact,
       totalBudget: totalBudget ?? this.totalBudget,
-      amountPaid: amountPaid ?? this.amountPaid,
       techStack: techStack ?? this.techStack,
       status: status ?? this.status,
       isSynced: isSynced ?? this.isSynced,
@@ -822,9 +778,6 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (totalBudget.present) {
       map['total_budget'] = Variable<double>(totalBudget.value);
     }
-    if (amountPaid.present) {
-      map['amount_paid'] = Variable<double>(amountPaid.value);
-    }
     if (techStack.present) {
       map['tech_stack'] = Variable<String>(techStack.value);
     }
@@ -856,7 +809,6 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('clientName: $clientName, ')
           ..write('clientContact: $clientContact, ')
           ..write('totalBudget: $totalBudget, ')
-          ..write('amountPaid: $amountPaid, ')
           ..write('techStack: $techStack, ')
           ..write('status: $status, ')
           ..write('isSynced: $isSynced, ')
@@ -2100,12 +2052,614 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
   }
 }
 
+class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InvoicesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: () => _uuid.v4(),
+  );
+  static const VerificationMeta _projectIdMeta = const VerificationMeta(
+    'projectId',
+  );
+  @override
+  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
+    'project_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES projects (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('Draft'),
+  );
+  static const VerificationMeta _dueDateMeta = const VerificationMeta(
+    'dueDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> dueDate = GeneratedColumn<DateTime>(
+    'due_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
+    'isSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
+    'is_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    projectId,
+    title,
+    amount,
+    status,
+    dueDate,
+    createdAt,
+    serverId,
+    isSynced,
+    isDeleted,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'invoices';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Invoice> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('project_id')) {
+      context.handle(
+        _projectIdMeta,
+        projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_projectIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('due_date')) {
+      context.handle(
+        _dueDateMeta,
+        dueDate.isAcceptableOrUnknown(data['due_date']!, _dueDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dueDateMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('is_synced')) {
+      context.handle(
+        _isSyncedMeta,
+        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Invoice map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Invoice(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      projectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}project_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      dueDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}due_date'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      isSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_synced'],
+      )!,
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
+    );
+  }
+
+  @override
+  $InvoicesTable createAlias(String alias) {
+    return $InvoicesTable(attachedDatabase, alias);
+  }
+}
+
+class Invoice extends DataClass implements Insertable<Invoice> {
+  final String id;
+  final String projectId;
+  final String title;
+  final double amount;
+  final String status;
+  final DateTime dueDate;
+  final DateTime createdAt;
+  final String? serverId;
+  final bool isSynced;
+  final bool isDeleted;
+  const Invoice({
+    required this.id,
+    required this.projectId,
+    required this.title,
+    required this.amount,
+    required this.status,
+    required this.dueDate,
+    required this.createdAt,
+    this.serverId,
+    required this.isSynced,
+    required this.isDeleted,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['project_id'] = Variable<String>(projectId);
+    map['title'] = Variable<String>(title);
+    map['amount'] = Variable<double>(amount);
+    map['status'] = Variable<String>(status);
+    map['due_date'] = Variable<DateTime>(dueDate);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    map['is_synced'] = Variable<bool>(isSynced);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    return map;
+  }
+
+  InvoicesCompanion toCompanion(bool nullToAbsent) {
+    return InvoicesCompanion(
+      id: Value(id),
+      projectId: Value(projectId),
+      title: Value(title),
+      amount: Value(amount),
+      status: Value(status),
+      dueDate: Value(dueDate),
+      createdAt: Value(createdAt),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      isSynced: Value(isSynced),
+      isDeleted: Value(isDeleted),
+    );
+  }
+
+  factory Invoice.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Invoice(
+      id: serializer.fromJson<String>(json['id']),
+      projectId: serializer.fromJson<String>(json['projectId']),
+      title: serializer.fromJson<String>(json['title']),
+      amount: serializer.fromJson<double>(json['amount']),
+      status: serializer.fromJson<String>(json['status']),
+      dueDate: serializer.fromJson<DateTime>(json['dueDate']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      isSynced: serializer.fromJson<bool>(json['isSynced']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'projectId': serializer.toJson<String>(projectId),
+      'title': serializer.toJson<String>(title),
+      'amount': serializer.toJson<double>(amount),
+      'status': serializer.toJson<String>(status),
+      'dueDate': serializer.toJson<DateTime>(dueDate),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'serverId': serializer.toJson<String?>(serverId),
+      'isSynced': serializer.toJson<bool>(isSynced),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+    };
+  }
+
+  Invoice copyWith({
+    String? id,
+    String? projectId,
+    String? title,
+    double? amount,
+    String? status,
+    DateTime? dueDate,
+    DateTime? createdAt,
+    Value<String?> serverId = const Value.absent(),
+    bool? isSynced,
+    bool? isDeleted,
+  }) => Invoice(
+    id: id ?? this.id,
+    projectId: projectId ?? this.projectId,
+    title: title ?? this.title,
+    amount: amount ?? this.amount,
+    status: status ?? this.status,
+    dueDate: dueDate ?? this.dueDate,
+    createdAt: createdAt ?? this.createdAt,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    isSynced: isSynced ?? this.isSynced,
+    isDeleted: isDeleted ?? this.isDeleted,
+  );
+  Invoice copyWithCompanion(InvoicesCompanion data) {
+    return Invoice(
+      id: data.id.present ? data.id.value : this.id,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      title: data.title.present ? data.title.value : this.title,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      status: data.status.present ? data.status.value : this.status,
+      dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Invoice(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('title: $title, ')
+          ..write('amount: $amount, ')
+          ..write('status: $status, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('serverId: $serverId, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('isDeleted: $isDeleted')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    projectId,
+    title,
+    amount,
+    status,
+    dueDate,
+    createdAt,
+    serverId,
+    isSynced,
+    isDeleted,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Invoice &&
+          other.id == this.id &&
+          other.projectId == this.projectId &&
+          other.title == this.title &&
+          other.amount == this.amount &&
+          other.status == this.status &&
+          other.dueDate == this.dueDate &&
+          other.createdAt == this.createdAt &&
+          other.serverId == this.serverId &&
+          other.isSynced == this.isSynced &&
+          other.isDeleted == this.isDeleted);
+}
+
+class InvoicesCompanion extends UpdateCompanion<Invoice> {
+  final Value<String> id;
+  final Value<String> projectId;
+  final Value<String> title;
+  final Value<double> amount;
+  final Value<String> status;
+  final Value<DateTime> dueDate;
+  final Value<DateTime> createdAt;
+  final Value<String?> serverId;
+  final Value<bool> isSynced;
+  final Value<bool> isDeleted;
+  final Value<int> rowid;
+  const InvoicesCompanion({
+    this.id = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.status = const Value.absent(),
+    this.dueDate = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InvoicesCompanion.insert({
+    this.id = const Value.absent(),
+    required String projectId,
+    required String title,
+    required double amount,
+    this.status = const Value.absent(),
+    required DateTime dueDate,
+    this.createdAt = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : projectId = Value(projectId),
+       title = Value(title),
+       amount = Value(amount),
+       dueDate = Value(dueDate);
+  static Insertable<Invoice> custom({
+    Expression<String>? id,
+    Expression<String>? projectId,
+    Expression<String>? title,
+    Expression<double>? amount,
+    Expression<String>? status,
+    Expression<DateTime>? dueDate,
+    Expression<DateTime>? createdAt,
+    Expression<String>? serverId,
+    Expression<bool>? isSynced,
+    Expression<bool>? isDeleted,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (projectId != null) 'project_id': projectId,
+      if (title != null) 'title': title,
+      if (amount != null) 'amount': amount,
+      if (status != null) 'status': status,
+      if (dueDate != null) 'due_date': dueDate,
+      if (createdAt != null) 'created_at': createdAt,
+      if (serverId != null) 'server_id': serverId,
+      if (isSynced != null) 'is_synced': isSynced,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InvoicesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? projectId,
+    Value<String>? title,
+    Value<double>? amount,
+    Value<String>? status,
+    Value<DateTime>? dueDate,
+    Value<DateTime>? createdAt,
+    Value<String?>? serverId,
+    Value<bool>? isSynced,
+    Value<bool>? isDeleted,
+    Value<int>? rowid,
+  }) {
+    return InvoicesCompanion(
+      id: id ?? this.id,
+      projectId: projectId ?? this.projectId,
+      title: title ?? this.title,
+      amount: amount ?? this.amount,
+      status: status ?? this.status,
+      dueDate: dueDate ?? this.dueDate,
+      createdAt: createdAt ?? this.createdAt,
+      serverId: serverId ?? this.serverId,
+      isSynced: isSynced ?? this.isSynced,
+      isDeleted: isDeleted ?? this.isDeleted,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (projectId.present) {
+      map['project_id'] = Variable<String>(projectId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (dueDate.present) {
+      map['due_date'] = Variable<DateTime>(dueDate.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (isSynced.present) {
+      map['is_synced'] = Variable<bool>(isSynced.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvoicesCompanion(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('title: $title, ')
+          ..write('amount: $amount, ')
+          ..write('status: $status, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('serverId: $serverId, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ProjectsTable projects = $ProjectsTable(this);
   late final $TasksTable tasks = $TasksTable(this);
   late final $VaultItemsTable vaultItems = $VaultItemsTable(this);
+  late final $InvoicesTable invoices = $InvoicesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2114,6 +2668,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     projects,
     tasks,
     vaultItems,
+    invoices,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -2131,6 +2686,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       ),
       result: [TableUpdate('vault_items', kind: UpdateKind.delete)],
     ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'projects',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('invoices', kind: UpdateKind.delete)],
+    ),
   ]);
 }
 
@@ -2146,7 +2708,6 @@ typedef $$ProjectsTableCreateCompanionBuilder =
       Value<String?> clientName,
       Value<String?> clientContact,
       Value<double> totalBudget,
-      Value<double> amountPaid,
       Value<String?> techStack,
       Value<int> status,
       Value<bool> isSynced,
@@ -2165,7 +2726,6 @@ typedef $$ProjectsTableUpdateCompanionBuilder =
       Value<String?> clientName,
       Value<String?> clientContact,
       Value<double> totalBudget,
-      Value<double> amountPaid,
       Value<String?> techStack,
       Value<int> status,
       Value<bool> isSynced,
@@ -2209,6 +2769,25 @@ final class $$ProjectsTableReferences
     ).filter((f) => f.projectId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_vaultItemsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$InvoicesTable, List<Invoice>> _invoicesRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.invoices,
+    aliasName: $_aliasNameGenerator(db.projects.id, db.invoices.projectId),
+  );
+
+  $$InvoicesTableProcessedTableManager get invoicesRefs {
+    final manager = $$InvoicesTableTableManager(
+      $_db,
+      $_db.invoices,
+    ).filter((f) => f.projectId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_invoicesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -2271,11 +2850,6 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<double> get totalBudget => $composableBuilder(
     column: $table.totalBudget,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get amountPaid => $composableBuilder(
-    column: $table.amountPaid,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2348,6 +2922,31 @@ class $$ProjectsTableFilterComposer
     );
     return f(composer);
   }
+
+  Expression<bool> invoicesRefs(
+    Expression<bool> Function($$InvoicesTableFilterComposer f) f,
+  ) {
+    final $$InvoicesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.invoices,
+      getReferencedColumn: (t) => t.projectId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InvoicesTableFilterComposer(
+            $db: $db,
+            $table: $db.invoices,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ProjectsTableOrderingComposer
@@ -2406,11 +3005,6 @@ class $$ProjectsTableOrderingComposer
 
   ColumnOrderings<double> get totalBudget => $composableBuilder(
     column: $table.totalBudget,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get amountPaid => $composableBuilder(
-    column: $table.amountPaid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2484,11 +3078,6 @@ class $$ProjectsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<double> get amountPaid => $composableBuilder(
-    column: $table.amountPaid,
-    builder: (column) => column,
-  );
-
   GeneratedColumn<String> get techStack =>
       $composableBuilder(column: $table.techStack, builder: (column) => column);
 
@@ -2550,6 +3139,31 @@ class $$ProjectsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> invoicesRefs<T extends Object>(
+    Expression<T> Function($$InvoicesTableAnnotationComposer a) f,
+  ) {
+    final $$InvoicesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.invoices,
+      getReferencedColumn: (t) => t.projectId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InvoicesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.invoices,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ProjectsTableTableManager
@@ -2565,7 +3179,11 @@ class $$ProjectsTableTableManager
           $$ProjectsTableUpdateCompanionBuilder,
           (Project, $$ProjectsTableReferences),
           Project,
-          PrefetchHooks Function({bool tasksRefs, bool vaultItemsRefs})
+          PrefetchHooks Function({
+            bool tasksRefs,
+            bool vaultItemsRefs,
+            bool invoicesRefs,
+          })
         > {
   $$ProjectsTableTableManager(_$AppDatabase db, $ProjectsTable table)
     : super(
@@ -2590,7 +3208,6 @@ class $$ProjectsTableTableManager
                 Value<String?> clientName = const Value.absent(),
                 Value<String?> clientContact = const Value.absent(),
                 Value<double> totalBudget = const Value.absent(),
-                Value<double> amountPaid = const Value.absent(),
                 Value<String?> techStack = const Value.absent(),
                 Value<int> status = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
@@ -2607,7 +3224,6 @@ class $$ProjectsTableTableManager
                 clientName: clientName,
                 clientContact: clientContact,
                 totalBudget: totalBudget,
-                amountPaid: amountPaid,
                 techStack: techStack,
                 status: status,
                 isSynced: isSynced,
@@ -2626,7 +3242,6 @@ class $$ProjectsTableTableManager
                 Value<String?> clientName = const Value.absent(),
                 Value<String?> clientContact = const Value.absent(),
                 Value<double> totalBudget = const Value.absent(),
-                Value<double> amountPaid = const Value.absent(),
                 Value<String?> techStack = const Value.absent(),
                 Value<int> status = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
@@ -2643,7 +3258,6 @@ class $$ProjectsTableTableManager
                 clientName: clientName,
                 clientContact: clientContact,
                 totalBudget: totalBudget,
-                amountPaid: amountPaid,
                 techStack: techStack,
                 status: status,
                 isSynced: isSynced,
@@ -2658,49 +3272,89 @@ class $$ProjectsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({tasksRefs = false, vaultItemsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (tasksRefs) db.tasks,
-                if (vaultItemsRefs) db.vaultItems,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (tasksRefs)
-                    await $_getPrefetchedData<Project, $ProjectsTable, Task>(
-                      currentTable: table,
-                      referencedTable: $$ProjectsTableReferences
-                          ._tasksRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$ProjectsTableReferences(db, table, p0).tasksRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.projectId == item.id),
-                      typedResults: items,
-                    ),
-                  if (vaultItemsRefs)
-                    await $_getPrefetchedData<
-                      Project,
-                      $ProjectsTable,
-                      VaultItem
-                    >(
-                      currentTable: table,
-                      referencedTable: $$ProjectsTableReferences
-                          ._vaultItemsRefsTable(db),
-                      managerFromTypedResult: (p0) => $$ProjectsTableReferences(
-                        db,
-                        table,
-                        p0,
-                      ).vaultItemsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.projectId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({
+                tasksRefs = false,
+                vaultItemsRefs = false,
+                invoicesRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (tasksRefs) db.tasks,
+                    if (vaultItemsRefs) db.vaultItems,
+                    if (invoicesRefs) db.invoices,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (tasksRefs)
+                        await $_getPrefetchedData<
+                          Project,
+                          $ProjectsTable,
+                          Task
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProjectsTableReferences
+                              ._tasksRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProjectsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).tasksRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.projectId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (vaultItemsRefs)
+                        await $_getPrefetchedData<
+                          Project,
+                          $ProjectsTable,
+                          VaultItem
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProjectsTableReferences
+                              ._vaultItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProjectsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).vaultItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.projectId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (invoicesRefs)
+                        await $_getPrefetchedData<
+                          Project,
+                          $ProjectsTable,
+                          Invoice
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProjectsTableReferences
+                              ._invoicesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProjectsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).invoicesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.projectId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -2717,7 +3371,11 @@ typedef $$ProjectsTableProcessedTableManager =
       $$ProjectsTableUpdateCompanionBuilder,
       (Project, $$ProjectsTableReferences),
       Project,
-      PrefetchHooks Function({bool tasksRefs, bool vaultItemsRefs})
+      PrefetchHooks Function({
+        bool tasksRefs,
+        bool vaultItemsRefs,
+        bool invoicesRefs,
+      })
     >;
 typedef $$TasksTableCreateCompanionBuilder =
     TasksCompanion Function({
@@ -3550,6 +4208,418 @@ typedef $$VaultItemsTableProcessedTableManager =
       VaultItem,
       PrefetchHooks Function({bool projectId})
     >;
+typedef $$InvoicesTableCreateCompanionBuilder =
+    InvoicesCompanion Function({
+      Value<String> id,
+      required String projectId,
+      required String title,
+      required double amount,
+      Value<String> status,
+      required DateTime dueDate,
+      Value<DateTime> createdAt,
+      Value<String?> serverId,
+      Value<bool> isSynced,
+      Value<bool> isDeleted,
+      Value<int> rowid,
+    });
+typedef $$InvoicesTableUpdateCompanionBuilder =
+    InvoicesCompanion Function({
+      Value<String> id,
+      Value<String> projectId,
+      Value<String> title,
+      Value<double> amount,
+      Value<String> status,
+      Value<DateTime> dueDate,
+      Value<DateTime> createdAt,
+      Value<String?> serverId,
+      Value<bool> isSynced,
+      Value<bool> isDeleted,
+      Value<int> rowid,
+    });
+
+final class $$InvoicesTableReferences
+    extends BaseReferences<_$AppDatabase, $InvoicesTable, Invoice> {
+  $$InvoicesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProjectsTable _projectIdTable(_$AppDatabase db) => db.projects
+      .createAlias($_aliasNameGenerator(db.invoices.projectId, db.projects.id));
+
+  $$ProjectsTableProcessedTableManager get projectId {
+    final $_column = $_itemColumn<String>('project_id')!;
+
+    final manager = $$ProjectsTableTableManager(
+      $_db,
+      $_db.projects,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_projectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$InvoicesTableFilterComposer
+    extends Composer<_$AppDatabase, $InvoicesTable> {
+  $$InvoicesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get dueDate => $composableBuilder(
+    column: $table.dueDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProjectsTableFilterComposer get projectId {
+    final $$ProjectsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableFilterComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$InvoicesTableOrderingComposer
+    extends Composer<_$AppDatabase, $InvoicesTable> {
+  $$InvoicesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get dueDate => $composableBuilder(
+    column: $table.dueDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProjectsTableOrderingComposer get projectId {
+    final $$ProjectsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableOrderingComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$InvoicesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $InvoicesTable> {
+  $$InvoicesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get dueDate =>
+      $composableBuilder(column: $table.dueDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSynced =>
+      $composableBuilder(column: $table.isSynced, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  $$ProjectsTableAnnotationComposer get projectId {
+    final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$InvoicesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $InvoicesTable,
+          Invoice,
+          $$InvoicesTableFilterComposer,
+          $$InvoicesTableOrderingComposer,
+          $$InvoicesTableAnnotationComposer,
+          $$InvoicesTableCreateCompanionBuilder,
+          $$InvoicesTableUpdateCompanionBuilder,
+          (Invoice, $$InvoicesTableReferences),
+          Invoice,
+          PrefetchHooks Function({bool projectId})
+        > {
+  $$InvoicesTableTableManager(_$AppDatabase db, $InvoicesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InvoicesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InvoicesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InvoicesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> projectId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> dueDate = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InvoicesCompanion(
+                id: id,
+                projectId: projectId,
+                title: title,
+                amount: amount,
+                status: status,
+                dueDate: dueDate,
+                createdAt: createdAt,
+                serverId: serverId,
+                isSynced: isSynced,
+                isDeleted: isDeleted,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                required String projectId,
+                required String title,
+                required double amount,
+                Value<String> status = const Value.absent(),
+                required DateTime dueDate,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InvoicesCompanion.insert(
+                id: id,
+                projectId: projectId,
+                title: title,
+                amount: amount,
+                status: status,
+                dueDate: dueDate,
+                createdAt: createdAt,
+                serverId: serverId,
+                isSynced: isSynced,
+                isDeleted: isDeleted,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$InvoicesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({projectId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (projectId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.projectId,
+                                referencedTable: $$InvoicesTableReferences
+                                    ._projectIdTable(db),
+                                referencedColumn: $$InvoicesTableReferences
+                                    ._projectIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$InvoicesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $InvoicesTable,
+      Invoice,
+      $$InvoicesTableFilterComposer,
+      $$InvoicesTableOrderingComposer,
+      $$InvoicesTableAnnotationComposer,
+      $$InvoicesTableCreateCompanionBuilder,
+      $$InvoicesTableUpdateCompanionBuilder,
+      (Invoice, $$InvoicesTableReferences),
+      Invoice,
+      PrefetchHooks Function({bool projectId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3560,4 +4630,6 @@ class $AppDatabaseManager {
       $$TasksTableTableManager(_db, _db.tasks);
   $$VaultItemsTableTableManager get vaultItems =>
       $$VaultItemsTableTableManager(_db, _db.vaultItems);
+  $$InvoicesTableTableManager get invoices =>
+      $$InvoicesTableTableManager(_db, _db.invoices);
 }

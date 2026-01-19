@@ -16,6 +16,8 @@ import '../projects/add_edit_project_screen.dart';
 import '../vault/vault_screen.dart';
 import '../../widgets/connectivity_indicator.dart';
 import '../tasks/add_edit_task_bottom_sheet.dart';
+import '../../../data/local/app_database.dart'
+    show Invoice; // Direct import for now as it's not in domain models
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});

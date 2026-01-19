@@ -29,7 +29,7 @@ class Projects extends Table {
 
   // Financial Info
   RealColumn get totalBudget => real().withDefault(const Constant(0.0))();
-  RealColumn get amountPaid => real().withDefault(const Constant(0.0))();
+  // RealColumn get amountPaid => real().withDefault(const Constant(0.0))(); // Moved to Invoices
 
   // Tech Info (JSON)
   TextColumn get techStack => text().nullable()();
@@ -65,6 +65,26 @@ class Tasks extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class Invoices extends Table {
+  TextColumn get id => text().clientDefault(() => _uuid.v4())();
+  TextColumn get projectId =>
+      text().references(Projects, #id, onDelete: KeyAction.cascade)();
+  TextColumn get title => text()(); // e.g. 'DP 30%'
+  RealColumn get amount => real()();
+  TextColumn get status =>
+      text().withDefault(const Constant('Draft'))(); // Draft, Sent, Paid
+  DateTimeColumn get dueDate => dateTime()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  // Sync flags (standard standard)
+  TextColumn get serverId => text().nullable()();
+  BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class VaultItems extends Table {
   TextColumn get id => text().clientDefault(() => _uuid.v4())();
   TextColumn get key => text()();
@@ -90,7 +110,7 @@ class VaultItems extends Table {
 
 // --- Database ---
 
-@DriftDatabase(tables: [Projects, Tasks, VaultItems])
+@DriftDatabase(tables: [Projects, Tasks, VaultItems, Invoices])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -99,11 +119,12 @@ class AppDatabase extends _$AppDatabase {
       await delete(tasks).go();
       await delete(projects).go();
       await delete(vaultItems).go();
+      await delete(invoices).go();
     });
   }
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -123,7 +144,19 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(projects, projects.clientName);
           await m.addColumn(projects, projects.clientContact);
           await m.addColumn(projects, projects.totalBudget);
-          await m.addColumn(projects, projects.amountPaid);
+
+          // amountPaid was added in v4 but removed in v7.
+          // Since we can't easily conditionally add it based on future knowledge,
+          // checking 'to' version is complex.
+          // However, for local drift, we can just skip adding it if we are upgrading freshly.
+          // But for existing users, it's already there.
+          // We'll leave the code here for legacy support if re-running migration,
+          // BUT since we removed the getter from the class, referencing `projects.amountPaid` will fail compilation.
+          // So we must comment it out or use raw sql if we really needed it.
+          // For now, we assume this block only runs for very old format upgrades.
+          // To fix compilation, we remove the reference.
+          // await m.addColumn(projects, projects.amountPaid);
+
           await m.addColumn(projects, projects.techStack);
           await m.addColumn(projects, projects.status);
         }
@@ -136,6 +169,9 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 6) {
           await m.addColumn(vaultItems, vaultItems.lastUpdated);
+        }
+        if (from < 7) {
+          await m.createTable(invoices);
         }
       },
     );

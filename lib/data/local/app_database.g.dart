@@ -1601,6 +1601,18 @@ class $VaultItemsTable extends VaultItems
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _lastUpdatedMeta = const VerificationMeta(
+    'lastUpdated',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastUpdated = GeneratedColumn<DateTime>(
+    'last_updated',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1612,6 +1624,7 @@ class $VaultItemsTable extends VaultItems
     isSynced,
     isDeleted,
     createdAt,
+    lastUpdated,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1680,6 +1693,15 @@ class $VaultItemsTable extends VaultItems
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('last_updated')) {
+      context.handle(
+        _lastUpdatedMeta,
+        lastUpdated.isAcceptableOrUnknown(
+          data['last_updated']!,
+          _lastUpdatedMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1725,6 +1747,10 @@ class $VaultItemsTable extends VaultItems
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      lastUpdated: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_updated'],
+      )!,
     );
   }
 
@@ -1744,6 +1770,7 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
   final bool isSynced;
   final bool isDeleted;
   final DateTime createdAt;
+  final DateTime lastUpdated;
   const VaultItem({
     required this.id,
     required this.key,
@@ -1754,6 +1781,7 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
     required this.isSynced,
     required this.isDeleted,
     required this.createdAt,
+    required this.lastUpdated,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1773,6 +1801,7 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
     map['is_synced'] = Variable<bool>(isSynced);
     map['is_deleted'] = Variable<bool>(isDeleted);
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['last_updated'] = Variable<DateTime>(lastUpdated);
     return map;
   }
 
@@ -1793,6 +1822,7 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
       isSynced: Value(isSynced),
       isDeleted: Value(isDeleted),
       createdAt: Value(createdAt),
+      lastUpdated: Value(lastUpdated),
     );
   }
 
@@ -1811,6 +1841,7 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
       isSynced: serializer.fromJson<bool>(json['isSynced']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      lastUpdated: serializer.fromJson<DateTime>(json['lastUpdated']),
     );
   }
   @override
@@ -1826,6 +1857,7 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
       'isSynced': serializer.toJson<bool>(isSynced),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'lastUpdated': serializer.toJson<DateTime>(lastUpdated),
     };
   }
 
@@ -1839,6 +1871,7 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
     bool? isSynced,
     bool? isDeleted,
     DateTime? createdAt,
+    DateTime? lastUpdated,
   }) => VaultItem(
     id: id ?? this.id,
     key: key ?? this.key,
@@ -1849,6 +1882,7 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
     isSynced: isSynced ?? this.isSynced,
     isDeleted: isDeleted ?? this.isDeleted,
     createdAt: createdAt ?? this.createdAt,
+    lastUpdated: lastUpdated ?? this.lastUpdated,
   );
   VaultItem copyWithCompanion(VaultItemsCompanion data) {
     return VaultItem(
@@ -1861,6 +1895,9 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
       isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      lastUpdated: data.lastUpdated.present
+          ? data.lastUpdated.value
+          : this.lastUpdated,
     );
   }
 
@@ -1875,7 +1912,8 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
           ..write('serverId: $serverId, ')
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastUpdated: $lastUpdated')
           ..write(')'))
         .toString();
   }
@@ -1891,6 +1929,7 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
     isSynced,
     isDeleted,
     createdAt,
+    lastUpdated,
   );
   @override
   bool operator ==(Object other) =>
@@ -1904,7 +1943,8 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
           other.serverId == this.serverId &&
           other.isSynced == this.isSynced &&
           other.isDeleted == this.isDeleted &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.lastUpdated == this.lastUpdated);
 }
 
 class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
@@ -1917,6 +1957,7 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
   final Value<bool> isSynced;
   final Value<bool> isDeleted;
   final Value<DateTime> createdAt;
+  final Value<DateTime> lastUpdated;
   final Value<int> rowid;
   const VaultItemsCompanion({
     this.id = const Value.absent(),
@@ -1928,6 +1969,7 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.lastUpdated = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   VaultItemsCompanion.insert({
@@ -1940,6 +1982,7 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.lastUpdated = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : key = Value(key),
        value = Value(value);
@@ -1953,6 +1996,7 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
     Expression<bool>? isSynced,
     Expression<bool>? isDeleted,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? lastUpdated,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1965,6 +2009,7 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
       if (isSynced != null) 'is_synced': isSynced,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (createdAt != null) 'created_at': createdAt,
+      if (lastUpdated != null) 'last_updated': lastUpdated,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1979,6 +2024,7 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
     Value<bool>? isSynced,
     Value<bool>? isDeleted,
     Value<DateTime>? createdAt,
+    Value<DateTime>? lastUpdated,
     Value<int>? rowid,
   }) {
     return VaultItemsCompanion(
@@ -1991,6 +2037,7 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
       isSynced: isSynced ?? this.isSynced,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2025,6 +2072,9 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (lastUpdated.present) {
+      map['last_updated'] = Variable<DateTime>(lastUpdated.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2043,6 +2093,7 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('createdAt: $createdAt, ')
+          ..write('lastUpdated: $lastUpdated, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3094,6 +3145,7 @@ typedef $$VaultItemsTableCreateCompanionBuilder =
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<DateTime> createdAt,
+      Value<DateTime> lastUpdated,
       Value<int> rowid,
     });
 typedef $$VaultItemsTableUpdateCompanionBuilder =
@@ -3107,6 +3159,7 @@ typedef $$VaultItemsTableUpdateCompanionBuilder =
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<DateTime> createdAt,
+      Value<DateTime> lastUpdated,
       Value<int> rowid,
     });
 
@@ -3183,6 +3236,11 @@ class $$VaultItemsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get lastUpdated => $composableBuilder(
+    column: $table.lastUpdated,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$ProjectsTableFilterComposer get projectId {
     final $$ProjectsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -3256,6 +3314,11 @@ class $$VaultItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get lastUpdated => $composableBuilder(
+    column: $table.lastUpdated,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$ProjectsTableOrderingComposer get projectId {
     final $$ProjectsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -3312,6 +3375,11 @@ class $$VaultItemsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUpdated => $composableBuilder(
+    column: $table.lastUpdated,
+    builder: (column) => column,
+  );
 
   $$ProjectsTableAnnotationComposer get projectId {
     final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
@@ -3374,6 +3442,7 @@ class $$VaultItemsTableTableManager
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> lastUpdated = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => VaultItemsCompanion(
                 id: id,
@@ -3385,6 +3454,7 @@ class $$VaultItemsTableTableManager
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 createdAt: createdAt,
+                lastUpdated: lastUpdated,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3398,6 +3468,7 @@ class $$VaultItemsTableTableManager
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> lastUpdated = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => VaultItemsCompanion.insert(
                 id: id,
@@ -3409,6 +3480,7 @@ class $$VaultItemsTableTableManager
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 createdAt: createdAt,
+                lastUpdated: lastUpdated,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

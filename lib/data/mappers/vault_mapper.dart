@@ -14,6 +14,7 @@ class VaultMapper {
       isSynced: entity.isSynced,
       isDeleted: entity.isDeleted,
       createdAt: entity.createdAt,
+      lastUpdated: entity.lastUpdated,
     );
   }
 
@@ -28,6 +29,7 @@ class VaultMapper {
       isSynced: Value(model.isSynced),
       isDeleted: Value(model.isDeleted),
       createdAt: Value(model.createdAt),
+      lastUpdated: Value(model.lastUpdated),
     );
   }
 }

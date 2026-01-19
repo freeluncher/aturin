@@ -19,5 +19,8 @@ class VaultItem {
     this.isSynced = false,
     this.isDeleted = false,
     required this.createdAt,
-  });
+    DateTime? lastUpdated,
+  }) : lastUpdated = lastUpdated ?? createdAt; // Default to createdAt if null
+
+  final DateTime lastUpdated;
 }

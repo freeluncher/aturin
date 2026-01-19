@@ -68,7 +68,9 @@ class ProjectRepositoryImpl implements ProjectRepository {
   Future<void> updateProject(domain.Project project) async {
     await (_db.update(
       _db.projects,
-    )..where((t) => t.id.equals(project.id))).write(project.toCompanion());
+    )..where((t) => t.id.equals(project.id))).write(
+      project.toCompanion().copyWith(lastUpdated: Value(DateTime.now())),
+    );
 
     if (await _isOnline()) {
       try {
@@ -97,10 +99,10 @@ class ProjectRepositoryImpl implements ProjectRepository {
     await (_db.update(
       _db.projects,
     )..where((t) => t.id.equals(projectId))).write(
-      const ProjectsCompanion(
-        isDeleted: Value(true),
-        isSynced: Value(false),
-        lastUpdated: Value.absent(),
+      ProjectsCompanion(
+        isDeleted: const Value(true),
+        isSynced: const Value(false),
+        lastUpdated: Value(DateTime.now()),
       ),
     );
 
@@ -170,9 +172,9 @@ class ProjectRepositoryImpl implements ProjectRepository {
 
   @override
   Future<void> updateTask(domain.Task task) async {
-    await (_db.update(
-      _db.tasks,
-    )..where((t) => t.id.equals(task.id))).write(task.toCompanion());
+    await (_db.update(_db.tasks)..where((t) => t.id.equals(task.id))).write(
+      task.toCompanion().copyWith(lastUpdated: Value(DateTime.now())),
+    );
 
     if (await _isOnline()) {
       try {
@@ -201,10 +203,10 @@ class ProjectRepositoryImpl implements ProjectRepository {
   Future<void> deleteTask(String taskId) async {
     // Soft delete
     await (_db.update(_db.tasks)..where((t) => t.id.equals(taskId))).write(
-      const TasksCompanion(
-        isDeleted: Value(true),
-        isSynced: Value(false),
-        lastUpdated: Value.absent(), // Should update timestamp ideally
+      TasksCompanion(
+        isDeleted: const Value(true),
+        isSynced: const Value(false),
+        lastUpdated: Value(DateTime.now()),
       ),
     );
 

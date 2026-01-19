@@ -81,6 +81,8 @@ class VaultItems extends Table {
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
 
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get lastUpdated =>
+      dateTime().withDefault(currentDateAndTime)();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -101,7 +103,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -131,6 +133,9 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(vaultItems, vaultItems.serverId);
           await m.addColumn(vaultItems, vaultItems.isSynced);
           await m.addColumn(vaultItems, vaultItems.isDeleted);
+        }
+        if (from < 6) {
+          await m.addColumn(vaultItems, vaultItems.lastUpdated);
         }
       },
     );

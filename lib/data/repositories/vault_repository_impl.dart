@@ -105,6 +105,7 @@ class VaultRepositoryImpl implements VaultRepository {
       isSynced: false, // Mark unsynced on change
       isDeleted: item.isDeleted,
       createdAt: item.createdAt,
+      lastUpdated: DateTime.now(), // Enforce local time on save
     );
 
     await _db
@@ -124,6 +125,7 @@ class VaultRepositoryImpl implements VaultRepository {
         projectId: const Value(null), // Detach Project
         isDeleted: const Value(true),
         isSynced: const Value(false), // Mark unsynced to trigger push
+        lastUpdated: Value(DateTime.now()), // Record deletion time locally
       ),
     );
   }

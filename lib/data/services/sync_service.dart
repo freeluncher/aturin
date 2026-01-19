@@ -299,6 +299,7 @@ class SyncService {
           'category': item.category,
           'project_id': item.projectId,
           'created_at': item.createdAt.toIso8601String(),
+          'last_updated': item.lastUpdated.toIso8601String(),
           'is_deleted': false, // Ensure server knows it's active
         };
 
@@ -322,6 +323,12 @@ class SyncService {
         final id = data['id'] as String;
         remoteIds.add(id);
 
+        // Use created_at as fallback if last_updated is null on server (old records)
+        final serverCreatedAt = DateTime.parse(data['created_at'] as String);
+        final serverUpdatedAt = data['last_updated'] != null
+            ? DateTime.parse(data['last_updated'] as String)
+            : serverCreatedAt;
+
         final localItem = await (_db.select(
           _db.vaultItems,
         )..where((t) => t.id.equals(id))).getSingleOrNull();
@@ -337,29 +344,29 @@ class SyncService {
                   category: Value(data['category'] as String?),
                   projectId: Value(data['project_id'] as String?),
                   serverId: Value(id),
-                  createdAt: Value(
-                    DateTime.parse(data['created_at'] as String),
-                  ),
+                  createdAt: Value(serverCreatedAt),
+                  lastUpdated: Value(serverUpdatedAt),
                   isSynced: const Value(true),
                   isDeleted: const Value(false),
                 ),
               );
         } else {
-          // If exists, overwrite with server data
-          // Only update if not locally modified/deleted pending sync
-          // Simple logic: Server wins
-          await (_db.update(
-            _db.vaultItems,
-          )..where((t) => t.id.equals(id))).write(
-            VaultItemsCompanion(
-              key: Value(data['key'] as String),
-              value: Value(data['value'] as String),
-              category: Value(data['category'] as String?),
-              projectId: Value(data['project_id'] as String?),
-              isSynced: const Value(true),
-              isDeleted: const Value(false),
-            ),
-          );
+          // Conflict Resolution: Server Wins if Newer
+          if (serverUpdatedAt.isAfter(localItem.lastUpdated)) {
+            await (_db.update(
+              _db.vaultItems,
+            )..where((t) => t.id.equals(id))).write(
+              VaultItemsCompanion(
+                key: Value(data['key'] as String),
+                value: Value(data['value'] as String),
+                category: Value(data['category'] as String?),
+                projectId: Value(data['project_id'] as String?),
+                lastUpdated: Value(serverUpdatedAt),
+                isSynced: const Value(true),
+                isDeleted: const Value(false),
+              ),
+            );
+          }
         }
       }
 

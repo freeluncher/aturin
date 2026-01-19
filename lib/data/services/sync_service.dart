@@ -15,8 +15,13 @@ class SyncService {
 
   /// Checks internet connection
   Future<bool> get isOnline async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    return !connectivityResult.contains(ConnectivityResult.none);
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      return !connectivityResult.contains(ConnectivityResult.none);
+    } catch (e) {
+      debugPrint('Error checking connectivity: $e');
+      return false; // Assume offline if check fails
+    }
   }
 
   /// Pushes local changes to remote
@@ -51,13 +56,32 @@ class SyncService {
   StreamSubscription<List<ConnectivityResult>>? _subscription;
 
   /// Initializes connectivity listener for auto-sync
-  void initialize() {
-    _subscription = Connectivity().onConnectivityChanged.listen((results) {
-      if (!results.contains(ConnectivityResult.none)) {
-        debugPrint('Connection restored. Triggering Auto-Sync...');
-        syncUp().then((_) => syncDown());
-      }
-    });
+  Future<void> initialize() async {
+    // Feature Check: Try to just check connectivity once.
+    // If this fails, the platform implementation is likely broken or permissions are missing.
+    try {
+      await Connectivity().checkConnectivity();
+    } catch (e) {
+      debugPrint('Connectivity plugin check failed (skipping auto-sync): $e');
+      return;
+    }
+
+    try {
+      _subscription = Connectivity().onConnectivityChanged.listen(
+        (results) {
+          if (!results.contains(ConnectivityResult.none)) {
+            debugPrint('Connection restored. Triggering Auto-Sync...');
+            syncUp().then((_) => syncDown());
+          }
+        },
+        onError: (e) {
+          debugPrint('Connectivity Stream Error: $e');
+        },
+      );
+    } catch (e) {
+      // Catch synchronous errors during listen setup
+      debugPrint('Failed to subscribe to connectivity updates: $e');
+    }
   }
 
   void dispose() {

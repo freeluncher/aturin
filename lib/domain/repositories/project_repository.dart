@@ -14,6 +14,7 @@ abstract class ProjectRepository {
 
   // Task Operations
   Stream<List<Task>> getTasks(String projectId);
+  Stream<List<Task>> getAllTasks();
   Future<void> createTask(Task task);
   Future<void> updateTask(Task task);
   Future<void> deleteTask(String taskId);

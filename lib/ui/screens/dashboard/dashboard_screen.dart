@@ -6,18 +6,36 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/providers.dart';
 import '../../widgets/bento_card.dart';
 import '../projects/project_list_screen.dart';
+import '../tasks/task_list_screen.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  int _selectedIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth > 900) {
-          return const _DesktopLayout();
+          return _DesktopLayout(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) {
+              setState(() => _selectedIndex = index);
+            },
+          );
         } else {
-          return const _MobileLayout();
+          return _MobileLayout(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) {
+              setState(() => _selectedIndex = index);
+            },
+          );
         }
       },
     );
@@ -25,7 +43,13 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _DesktopLayout extends ConsumerWidget {
-  const _DesktopLayout();
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  const _DesktopLayout({
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,7 +58,7 @@ class _DesktopLayout extends ConsumerWidget {
     return Scaffold(
       body: Row(
         children: [
-          // Sidebar Placeholder
+          // Sidebar
           Container(
             width: 250,
             color: theme.colorScheme.surface,
@@ -49,13 +73,24 @@ class _DesktopLayout extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 32),
-                const _SidebarItem(
+                _SidebarItem(
                   icon: LucideIcons.layoutDashboard,
                   label: 'Dashboard',
-                  isActive: true,
+                  isActive: selectedIndex == 0,
+                  onTap: () => onDestinationSelected(0),
                 ),
-                const _SidebarItem(icon: LucideIcons.folder, label: 'Projects'),
-                _SidebarItem(icon: LucideIcons.checkSquare, label: 'Tasks'),
+                _SidebarItem(
+                  icon: LucideIcons.folder,
+                  label: 'Projects',
+                  isActive: selectedIndex == 1,
+                  onTap: () => onDestinationSelected(1),
+                ),
+                _SidebarItem(
+                  icon: LucideIcons.checkSquare,
+                  label: 'Tasks',
+                  isActive: selectedIndex == 2,
+                  onTap: () => onDestinationSelected(2),
+                ),
                 _SidebarItem(
                   icon: LucideIcons.refreshCw,
                   label: 'Sync Data',
@@ -85,112 +120,37 @@ class _DesktopLayout extends ConsumerWidget {
             ),
           ),
           // Main Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Dashboard', style: theme.textTheme.headlineMedium),
-                  const SizedBox(height: 24),
-                  StaggeredGrid.count(
-                    crossAxisCount: 4,
-                    mainAxisSpacing: 24,
-                    crossAxisSpacing: 24,
-                    children: [
-                      StaggeredGridTile.count(
-                        crossAxisCellCount: 2,
-                        mainAxisCellCount: 2,
-                        child: BentoCard(
-                          title: 'Pendapatan Bulan Ini',
-                          icon: LucideIcons.wallet,
-                          child: Center(
-                            child: Text(
-                              'Rp 15.000.000',
-                              style: theme.textTheme.displayMedium,
-                            ),
-                          ),
-                        ),
-                      ),
-                      StaggeredGridTile.count(
-                        crossAxisCellCount: 1,
-                        mainAxisCellCount: 1,
-                        child: BentoCard(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ProjectListScreen(),
-                            ),
-                          ),
-                          title: 'Proyek Aktif',
-                          icon: LucideIcons.briefcase,
-                          child: Center(
-                            child: Text(
-                              '5',
-                              style: theme.textTheme.displaySmall,
-                            ),
-                          ),
-                        ),
-                      ),
-                      StaggeredGridTile.count(
-                        crossAxisCellCount: 1,
-                        mainAxisCellCount: 1,
-                        child: BentoCard(
-                          title: 'Deadline Terdekat',
-                          icon: LucideIcons.clock,
-                          child: Center(
-                            child: Text(
-                              '2 Hari',
-                              style: theme.textTheme.displaySmall?.copyWith(
-                                color: theme.colorScheme.error,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      StaggeredGridTile.count(
-                        crossAxisCellCount: 4,
-                        mainAxisCellCount: 2,
-                        child: BentoCard(
-                          title: 'Daftar Tugas Hari Ini',
-                          icon: LucideIcons.listTodo,
-                          child: ListView(
-                            children: const [
-                              ListTile(
-                                title: Text('Revisi Desain App'),
-                                leading: Icon(LucideIcons.checkCircle),
-                              ),
-                              ListTile(
-                                title: Text('Meeting Klien A'),
-                                leading: Icon(LucideIcons.circle),
-                              ),
-                              ListTile(
-                                title: Text('Push Code Backend'),
-                                leading: Icon(LucideIcons.circle),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+          Expanded(child: _buildContent(selectedIndex)),
         ],
       ),
     );
   }
+
+  Widget _buildContent(int index) {
+    switch (index) {
+      case 0:
+        return _DashboardHome();
+      case 1:
+        return const ProjectListScreen();
+      case 2:
+        return const TaskListScreen();
+      default:
+        return _DashboardHome();
+    }
+  }
 }
 
 class _MobileLayout extends ConsumerWidget {
-  const _MobileLayout();
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  const _MobileLayout({
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Atur.in'),
@@ -219,7 +179,8 @@ class _MobileLayout extends ConsumerWidget {
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
+        selectedIndex: selectedIndex,
+        onDestinationSelected: onDestinationSelected,
         destinations: const [
           NavigationDestination(
             icon: Icon(LucideIcons.layoutDashboard),
@@ -235,83 +196,120 @@ class _MobileLayout extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            BentoCard(
-              title: 'Pendapatan Bulan Ini',
-              icon: LucideIcons.wallet,
-              height: 200,
-              child: Center(
-                child: Text(
-                  'Rp 15.000.000',
-                  style: theme.textTheme.headlineMedium,
+      body: _buildContent(selectedIndex),
+    );
+  }
+
+  Widget _buildContent(int index) {
+    switch (index) {
+      case 0:
+        return _DashboardHome();
+      case 1:
+        return const ProjectListScreen();
+      case 2:
+        return const TaskListScreen();
+      default:
+        return _DashboardHome();
+    }
+  }
+}
+
+class _DashboardHome extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Dashboard', style: theme.textTheme.headlineMedium),
+          const SizedBox(height: 24),
+          StaggeredGrid.count(
+            crossAxisCount: 4,
+            mainAxisSpacing: 24,
+            crossAxisSpacing: 24,
+            children: [
+              StaggeredGridTile.count(
+                crossAxisCellCount: 2,
+                mainAxisCellCount: 2,
+                child: BentoCard(
+                  title: 'Pendapatan Bulan Ini',
+                  icon: LucideIcons.wallet,
+                  child: Center(
+                    child: Text(
+                      'Rp 15.000.000',
+                      style: theme.textTheme.displayMedium?.copyWith(
+                        fontSize:
+                            24, // Adjust for mobile if needed, but displayMedium is responsive often
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: BentoCard(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ProjectListScreen(),
-                      ),
-                    ),
-                    title: 'Proyek Aktif',
-                    icon: LucideIcons.briefcase,
-                    height: 150,
-                    child: Center(
-                      child: Text('5', style: theme.textTheme.headlineSmall),
-                    ),
+              StaggeredGridTile.count(
+                crossAxisCellCount: 2,
+                mainAxisCellCount: 1,
+                child: BentoCard(
+                  // We can link this to Projects tab if we had access to controller,
+                  // but effectively it's just info for now.
+                  // Or we can invoke onDestinationSelected if we passed it down.
+                  // For simplicity, let's keep it informational or link via Navigator if separate screen needed.
+                  // BUT goal is Tabs. So maybe just Text for now.
+                  title: 'Proyek Aktif',
+                  icon: LucideIcons.briefcase,
+                  child: Center(
+                    child: Text('5', style: theme.textTheme.displaySmall),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: BentoCard(
-                    title: 'Deadline',
-                    icon: LucideIcons.clock,
-                    height: 150,
-                    child: Center(
-                      child: Text(
-                        '2 Hari',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: theme.colorScheme.error,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            BentoCard(
-              title: 'Daftar Tugas Hari Ini',
-              icon: LucideIcons.listTodo,
-              height: 300,
-              child: ListView(
-                physics: const NeverScrollableScrollPhysics(),
-                children: const [
-                  ListTile(
-                    title: Text('Revisi Desain App'),
-                    leading: Icon(LucideIcons.checkCircle),
-                  ),
-                  ListTile(
-                    title: Text('Meeting Klien A'),
-                    leading: Icon(LucideIcons.circle),
-                  ),
-                  ListTile(
-                    title: Text('Push Code Backend'),
-                    leading: Icon(LucideIcons.circle),
-                  ),
-                ],
               ),
-            ),
-          ],
-        ),
+              StaggeredGridTile.count(
+                crossAxisCellCount: 2,
+                mainAxisCellCount: 1,
+                child: BentoCard(
+                  title: 'Deadline Terdekat',
+                  icon: LucideIcons.clock,
+                  child: Center(
+                    child: Text(
+                      '2 Hari',
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Full width for tasks summary
+              StaggeredGridTile.count(
+                crossAxisCellCount: 4,
+                mainAxisCellCount: 2,
+                child: BentoCard(
+                  title: 'Daftar Tugas Hari Ini',
+                  icon: LucideIcons.listTodo,
+                  child: ListView(
+                    physics:
+                        const NeverScrollableScrollPhysics(), // Nested in single child view
+                    children: const [
+                      ListTile(
+                        title: Text('Revisi Desain App'),
+                        leading: Icon(LucideIcons.checkCircle),
+                      ),
+                      ListTile(
+                        title: Text('Meeting Klien A'),
+                        leading: Icon(LucideIcons.circle),
+                      ),
+                      ListTile(
+                        title: Text('Push Code Backend'),
+                        leading: Icon(LucideIcons.circle),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

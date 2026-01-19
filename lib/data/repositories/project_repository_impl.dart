@@ -132,6 +132,13 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
+  Stream<List<domain.Task>> getAllTasks() {
+    return (_db.select(_db.tasks)..where((t) => t.isDeleted.equals(false)))
+        .watch()
+        .map((rows) => rows.map((row) => row.toDomain()).toList());
+  }
+
+  @override
   Future<void> createTask(domain.Task task) async {
     await _db.into(_db.tasks).insert(task.toCompanion());
     if (await _isOnline()) {
@@ -263,7 +270,12 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   Future<bool> _isOnline() async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    return !connectivityResult.contains(ConnectivityResult.none);
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      return !connectivityResult.contains(ConnectivityResult.none);
+    } catch (e) {
+      debugPrint('Error checking connectivity: $e');
+      return false; // Assume offline if check fails
+    }
   }
 }

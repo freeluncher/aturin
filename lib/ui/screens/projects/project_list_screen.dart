@@ -64,6 +64,7 @@ class ProjectListScreen extends ConsumerWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'project_list_fab',
         onPressed: () {
           Navigator.push(
             context,

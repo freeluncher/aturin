@@ -71,6 +71,7 @@ class _DesktopLayout extends ConsumerWidget {
                 vertical: 12.0,
               ),
               child: FloatingActionButton.extended(
+                heroTag: 'desktop_nav_fab',
                 onPressed: () {
                   // Navigate to 'Add Project' or show dialog
                   // Since Create Project is a screen, we might need Navigator
@@ -199,6 +200,7 @@ class _MobileLayout extends ConsumerWidget {
           // Let's hide it on 'Tasks' or make it create project.
           // Actually, dashboard often allows "Quick Create". Let's put it there too.
           ? FloatingActionButton(
+              heroTag: 'mobile_dashboard_fab',
               onPressed: () {
                 Navigator.push(
                   context,

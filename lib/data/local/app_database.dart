@@ -68,8 +68,18 @@ class Tasks extends Table {
 class VaultItems extends Table {
   TextColumn get id => text().clientDefault(() => _uuid.v4())();
   TextColumn get key => text()();
-  TextColumn get value => text()();
+  TextColumn get value => text()(); // Encrypted Value
   TextColumn get category => text().nullable()();
+  TextColumn get projectId => text().nullable().references(
+    Projects,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+
+  TextColumn get serverId => text().nullable()();
+  BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
@@ -91,7 +101,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -114,6 +124,13 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(projects, projects.amountPaid);
           await m.addColumn(projects, projects.techStack);
           await m.addColumn(projects, projects.status);
+        }
+        if (from < 5) {
+          // Vault Sync & Association
+          await m.addColumn(vaultItems, vaultItems.projectId);
+          await m.addColumn(vaultItems, vaultItems.serverId);
+          await m.addColumn(vaultItems, vaultItems.isSynced);
+          await m.addColumn(vaultItems, vaultItems.isDeleted);
         }
       },
     );

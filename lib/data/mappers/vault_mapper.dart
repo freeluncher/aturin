@@ -9,6 +9,10 @@ class VaultMapper {
       key: entity.key,
       value: entity.value,
       category: entity.category,
+      projectId: entity.projectId,
+      serverId: entity.serverId,
+      isSynced: entity.isSynced,
+      isDeleted: entity.isDeleted,
       createdAt: entity.createdAt,
     );
   }
@@ -19,6 +23,10 @@ class VaultMapper {
       key: Value(model.key),
       value: Value(model.value),
       category: Value(model.category),
+      projectId: Value(model.projectId),
+      serverId: Value(model.serverId),
+      isSynced: Value(model.isSynced),
+      isDeleted: Value(model.isDeleted),
       createdAt: Value(model.createdAt),
     );
   }

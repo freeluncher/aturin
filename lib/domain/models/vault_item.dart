@@ -3,6 +3,10 @@ class VaultItem {
   final String key;
   final String value;
   final String? category;
+  final String? projectId;
+  final String? serverId;
+  final bool isSynced;
+  final bool isDeleted;
   final DateTime createdAt;
 
   VaultItem({
@@ -10,6 +14,10 @@ class VaultItem {
     required this.key,
     required this.value,
     this.category,
+    this.projectId,
+    this.serverId,
+    this.isSynced = false,
+    this.isDeleted = false,
     required this.createdAt,
   });
 }

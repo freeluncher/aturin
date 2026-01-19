@@ -47,6 +47,15 @@ class SyncService {
         await _syncUpTask(task);
       }
 
+      // 3. Sync Vault Up
+      final unsyncedVault = await (_db.select(
+        _db.vaultItems,
+      )..where((t) => t.isSynced.equals(false))).get();
+
+      for (var item in unsyncedVault) {
+        await _syncUpVault(item);
+      }
+
       debugPrint('SyncUp completed');
     } catch (e) {
       debugPrint('SyncUp failed: $e');
@@ -98,6 +107,9 @@ class SyncService {
 
       // 2. Sync Tasks Down
       await _syncDownTasks();
+
+      // 3. Sync Vault Down
+      await _syncDownVault();
 
       debugPrint('SyncDown completed');
     } catch (e) {
@@ -262,6 +274,83 @@ class SyncService {
           );
         }
       }
+    }
+  }
+  // --- Vault Sync Logic ---
+
+  Future<void> _syncUpVault(VaultItem item) async {
+    try {
+      final data = {
+        'id': item.id,
+        'user_id': _supabase.auth.currentUser?.id,
+        'key': item.key,
+        'value': item.value, // This is already encrypted in DB
+        'category': item.category,
+        'project_id': item.projectId,
+        'created_at': item.createdAt.toIso8601String(),
+        'is_deleted': item.isDeleted,
+      };
+
+      await _supabase.from('vault_items').upsert(data);
+
+      await (_db.update(_db.vaultItems)..where((t) => t.id.equals(item.id)))
+          .write(VaultItemsCompanion(isSynced: const Value(true)));
+    } catch (e) {
+      debugPrint('Failed to sync up vault item ${item.id}: $e');
+    }
+  }
+
+  Future<void> _syncDownVault() async {
+    try {
+      final response = await _supabase.from('vault_items').select();
+      final remoteItems = response as List<dynamic>;
+
+      for (var data in remoteItems) {
+        final id = data['id'] as String;
+        // Vault items usually don't have last_updated in this schema (simplified)
+        // We'll trust server if it exists.
+
+        final localItem = await (_db.select(
+          _db.vaultItems,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+
+        if (localItem == null) {
+          await _db
+              .into(_db.vaultItems)
+              .insert(
+                VaultItemsCompanion.insert(
+                  id: Value(id),
+                  key: data['key'] as String,
+                  value: data['value'] as String, // Encrypted from server
+                  category: Value(data['category'] as String?),
+                  projectId: Value(data['project_id'] as String?),
+                  serverId: Value(id),
+                  createdAt: Value(
+                    DateTime.parse(data['created_at'] as String),
+                  ),
+                  isSynced: const Value(true),
+                  isDeleted: Value(data['is_deleted'] as bool? ?? false),
+                ),
+              );
+        } else {
+          // If exists, overwrite with server data (assuming server is source of truth for now)
+          // ideally check timestamps or versions if strictly needed.
+          await (_db.update(
+            _db.vaultItems,
+          )..where((t) => t.id.equals(id))).write(
+            VaultItemsCompanion(
+              key: Value(data['key'] as String),
+              value: Value(data['value'] as String),
+              category: Value(data['category'] as String?),
+              projectId: Value(data['project_id'] as String?),
+              isSynced: const Value(true),
+              isDeleted: Value(data['is_deleted'] as bool? ?? false),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('SyncDown Vault failed: $e');
     }
   }
 }

@@ -1534,6 +1534,61 @@ class $VaultItemsTable extends VaultItems
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _projectIdMeta = const VerificationMeta(
+    'projectId',
+  );
+  @override
+  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
+    'project_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES projects (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
+    'isSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
+    'is_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1547,7 +1602,17 @@ class $VaultItemsTable extends VaultItems
     defaultValue: currentDateAndTime,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, key, value, category, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    key,
+    value,
+    category,
+    projectId,
+    serverId,
+    isSynced,
+    isDeleted,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1585,6 +1650,30 @@ class $VaultItemsTable extends VaultItems
         category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
       );
     }
+    if (data.containsKey('project_id')) {
+      context.handle(
+        _projectIdMeta,
+        projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('is_synced')) {
+      context.handle(
+        _isSyncedMeta,
+        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1616,6 +1705,22 @@ class $VaultItemsTable extends VaultItems
         DriftSqlType.string,
         data['${effectivePrefix}category'],
       ),
+      projectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}project_id'],
+      ),
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      isSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_synced'],
+      )!,
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1634,12 +1739,20 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
   final String key;
   final String value;
   final String? category;
+  final String? projectId;
+  final String? serverId;
+  final bool isSynced;
+  final bool isDeleted;
   final DateTime createdAt;
   const VaultItem({
     required this.id,
     required this.key,
     required this.value,
     this.category,
+    this.projectId,
+    this.serverId,
+    required this.isSynced,
+    required this.isDeleted,
     required this.createdAt,
   });
   @override
@@ -1651,6 +1764,14 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
     if (!nullToAbsent || category != null) {
       map['category'] = Variable<String>(category);
     }
+    if (!nullToAbsent || projectId != null) {
+      map['project_id'] = Variable<String>(projectId);
+    }
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    map['is_synced'] = Variable<bool>(isSynced);
+    map['is_deleted'] = Variable<bool>(isDeleted);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1663,6 +1784,14 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
       category: category == null && nullToAbsent
           ? const Value.absent()
           : Value(category),
+      projectId: projectId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(projectId),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      isSynced: Value(isSynced),
+      isDeleted: Value(isDeleted),
       createdAt: Value(createdAt),
     );
   }
@@ -1677,6 +1806,10 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
       key: serializer.fromJson<String>(json['key']),
       value: serializer.fromJson<String>(json['value']),
       category: serializer.fromJson<String?>(json['category']),
+      projectId: serializer.fromJson<String?>(json['projectId']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      isSynced: serializer.fromJson<bool>(json['isSynced']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1688,6 +1821,10 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
       'key': serializer.toJson<String>(key),
       'value': serializer.toJson<String>(value),
       'category': serializer.toJson<String?>(category),
+      'projectId': serializer.toJson<String?>(projectId),
+      'serverId': serializer.toJson<String?>(serverId),
+      'isSynced': serializer.toJson<bool>(isSynced),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1697,12 +1834,20 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
     String? key,
     String? value,
     Value<String?> category = const Value.absent(),
+    Value<String?> projectId = const Value.absent(),
+    Value<String?> serverId = const Value.absent(),
+    bool? isSynced,
+    bool? isDeleted,
     DateTime? createdAt,
   }) => VaultItem(
     id: id ?? this.id,
     key: key ?? this.key,
     value: value ?? this.value,
     category: category.present ? category.value : this.category,
+    projectId: projectId.present ? projectId.value : this.projectId,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    isSynced: isSynced ?? this.isSynced,
+    isDeleted: isDeleted ?? this.isDeleted,
     createdAt: createdAt ?? this.createdAt,
   );
   VaultItem copyWithCompanion(VaultItemsCompanion data) {
@@ -1711,6 +1856,10 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
       key: data.key.present ? data.key.value : this.key,
       value: data.value.present ? data.value.value : this.value,
       category: data.category.present ? data.category.value : this.category,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1722,13 +1871,27 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
           ..write('key: $key, ')
           ..write('value: $value, ')
           ..write('category: $category, ')
+          ..write('projectId: $projectId, ')
+          ..write('serverId: $serverId, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('isDeleted: $isDeleted, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, key, value, category, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    key,
+    value,
+    category,
+    projectId,
+    serverId,
+    isSynced,
+    isDeleted,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1737,6 +1900,10 @@ class VaultItem extends DataClass implements Insertable<VaultItem> {
           other.key == this.key &&
           other.value == this.value &&
           other.category == this.category &&
+          other.projectId == this.projectId &&
+          other.serverId == this.serverId &&
+          other.isSynced == this.isSynced &&
+          other.isDeleted == this.isDeleted &&
           other.createdAt == this.createdAt);
 }
 
@@ -1745,6 +1912,10 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
   final Value<String> key;
   final Value<String> value;
   final Value<String?> category;
+  final Value<String?> projectId;
+  final Value<String?> serverId;
+  final Value<bool> isSynced;
+  final Value<bool> isDeleted;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const VaultItemsCompanion({
@@ -1752,6 +1923,10 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
     this.key = const Value.absent(),
     this.value = const Value.absent(),
     this.category = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.isDeleted = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1760,6 +1935,10 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
     required String key,
     required String value,
     this.category = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.isDeleted = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : key = Value(key),
@@ -1769,6 +1948,10 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
     Expression<String>? key,
     Expression<String>? value,
     Expression<String>? category,
+    Expression<String>? projectId,
+    Expression<String>? serverId,
+    Expression<bool>? isSynced,
+    Expression<bool>? isDeleted,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -1777,6 +1960,10 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
       if (key != null) 'key': key,
       if (value != null) 'value': value,
       if (category != null) 'category': category,
+      if (projectId != null) 'project_id': projectId,
+      if (serverId != null) 'server_id': serverId,
+      if (isSynced != null) 'is_synced': isSynced,
+      if (isDeleted != null) 'is_deleted': isDeleted,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1787,6 +1974,10 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
     Value<String>? key,
     Value<String>? value,
     Value<String?>? category,
+    Value<String?>? projectId,
+    Value<String?>? serverId,
+    Value<bool>? isSynced,
+    Value<bool>? isDeleted,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -1795,6 +1986,10 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
       key: key ?? this.key,
       value: value ?? this.value,
       category: category ?? this.category,
+      projectId: projectId ?? this.projectId,
+      serverId: serverId ?? this.serverId,
+      isSynced: isSynced ?? this.isSynced,
+      isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1815,6 +2010,18 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
     if (category.present) {
       map['category'] = Variable<String>(category.value);
     }
+    if (projectId.present) {
+      map['project_id'] = Variable<String>(projectId.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (isSynced.present) {
+      map['is_synced'] = Variable<bool>(isSynced.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1831,6 +2038,10 @@ class VaultItemsCompanion extends UpdateCompanion<VaultItem> {
           ..write('key: $key, ')
           ..write('value: $value, ')
           ..write('category: $category, ')
+          ..write('projectId: $projectId, ')
+          ..write('serverId: $serverId, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('isDeleted: $isDeleted, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1861,6 +2072,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('tasks', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'projects',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('vault_items', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -1922,6 +2140,24 @@ final class $$ProjectsTableReferences
     ).filter((f) => f.projectId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_tasksRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$VaultItemsTable, List<VaultItem>>
+  _vaultItemsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.vaultItems,
+    aliasName: $_aliasNameGenerator(db.projects.id, db.vaultItems.projectId),
+  );
+
+  $$VaultItemsTableProcessedTableManager get vaultItemsRefs {
+    final manager = $$VaultItemsTableTableManager(
+      $_db,
+      $_db.vaultItems,
+    ).filter((f) => f.projectId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_vaultItemsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -2028,6 +2264,31 @@ class $$ProjectsTableFilterComposer
           }) => $$TasksTableFilterComposer(
             $db: $db,
             $table: $db.tasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> vaultItemsRefs(
+    Expression<bool> Function($$VaultItemsTableFilterComposer f) f,
+  ) {
+    final $$VaultItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.vaultItems,
+      getReferencedColumn: (t) => t.projectId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$VaultItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.vaultItems,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2213,6 +2474,31 @@ class $$ProjectsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> vaultItemsRefs<T extends Object>(
+    Expression<T> Function($$VaultItemsTableAnnotationComposer a) f,
+  ) {
+    final $$VaultItemsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.vaultItems,
+      getReferencedColumn: (t) => t.projectId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$VaultItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.vaultItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ProjectsTableTableManager
@@ -2228,7 +2514,7 @@ class $$ProjectsTableTableManager
           $$ProjectsTableUpdateCompanionBuilder,
           (Project, $$ProjectsTableReferences),
           Project,
-          PrefetchHooks Function({bool tasksRefs})
+          PrefetchHooks Function({bool tasksRefs, bool vaultItemsRefs})
         > {
   $$ProjectsTableTableManager(_$AppDatabase db, $ProjectsTable table)
     : super(
@@ -2321,10 +2607,13 @@ class $$ProjectsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({tasksRefs = false}) {
+          prefetchHooksCallback: ({tasksRefs = false, vaultItemsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [if (tasksRefs) db.tasks],
+              explicitlyWatchedTables: [
+                if (tasksRefs) db.tasks,
+                if (vaultItemsRefs) db.vaultItems,
+              ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
                 return [
@@ -2335,6 +2624,24 @@ class $$ProjectsTableTableManager
                           ._tasksRefsTable(db),
                       managerFromTypedResult: (p0) =>
                           $$ProjectsTableReferences(db, table, p0).tasksRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.projectId == item.id),
+                      typedResults: items,
+                    ),
+                  if (vaultItemsRefs)
+                    await $_getPrefetchedData<
+                      Project,
+                      $ProjectsTable,
+                      VaultItem
+                    >(
+                      currentTable: table,
+                      referencedTable: $$ProjectsTableReferences
+                          ._vaultItemsRefsTable(db),
+                      managerFromTypedResult: (p0) => $$ProjectsTableReferences(
+                        db,
+                        table,
+                        p0,
+                      ).vaultItemsRefs,
                       referencedItemsForCurrentItem: (item, referencedItems) =>
                           referencedItems.where((e) => e.projectId == item.id),
                       typedResults: items,
@@ -2359,7 +2666,7 @@ typedef $$ProjectsTableProcessedTableManager =
       $$ProjectsTableUpdateCompanionBuilder,
       (Project, $$ProjectsTableReferences),
       Project,
-      PrefetchHooks Function({bool tasksRefs})
+      PrefetchHooks Function({bool tasksRefs, bool vaultItemsRefs})
     >;
 typedef $$TasksTableCreateCompanionBuilder =
     TasksCompanion Function({
@@ -2782,6 +3089,10 @@ typedef $$VaultItemsTableCreateCompanionBuilder =
       required String key,
       required String value,
       Value<String?> category,
+      Value<String?> projectId,
+      Value<String?> serverId,
+      Value<bool> isSynced,
+      Value<bool> isDeleted,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -2791,9 +3102,37 @@ typedef $$VaultItemsTableUpdateCompanionBuilder =
       Value<String> key,
       Value<String> value,
       Value<String?> category,
+      Value<String?> projectId,
+      Value<String?> serverId,
+      Value<bool> isSynced,
+      Value<bool> isDeleted,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
+
+final class $$VaultItemsTableReferences
+    extends BaseReferences<_$AppDatabase, $VaultItemsTable, VaultItem> {
+  $$VaultItemsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProjectsTable _projectIdTable(_$AppDatabase db) =>
+      db.projects.createAlias(
+        $_aliasNameGenerator(db.vaultItems.projectId, db.projects.id),
+      );
+
+  $$ProjectsTableProcessedTableManager? get projectId {
+    final $_column = $_itemColumn<String>('project_id');
+    if ($_column == null) return null;
+    final manager = $$ProjectsTableTableManager(
+      $_db,
+      $_db.projects,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_projectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
 
 class $$VaultItemsTableFilterComposer
     extends Composer<_$AppDatabase, $VaultItemsTable> {
@@ -2824,10 +3163,48 @@ class $$VaultItemsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$ProjectsTableFilterComposer get projectId {
+    final $$ProjectsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableFilterComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$VaultItemsTableOrderingComposer
@@ -2859,10 +3236,48 @@ class $$VaultItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$ProjectsTableOrderingComposer get projectId {
+    final $$ProjectsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableOrderingComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$VaultItemsTableAnnotationComposer
@@ -2886,8 +3301,40 @@ class $$VaultItemsTableAnnotationComposer
   GeneratedColumn<String> get category =>
       $composableBuilder(column: $table.category, builder: (column) => column);
 
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSynced =>
+      $composableBuilder(column: $table.isSynced, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ProjectsTableAnnotationComposer get projectId {
+    final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$VaultItemsTableTableManager
@@ -2901,12 +3348,9 @@ class $$VaultItemsTableTableManager
           $$VaultItemsTableAnnotationComposer,
           $$VaultItemsTableCreateCompanionBuilder,
           $$VaultItemsTableUpdateCompanionBuilder,
-          (
-            VaultItem,
-            BaseReferences<_$AppDatabase, $VaultItemsTable, VaultItem>,
-          ),
+          (VaultItem, $$VaultItemsTableReferences),
           VaultItem,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool projectId})
         > {
   $$VaultItemsTableTableManager(_$AppDatabase db, $VaultItemsTable table)
     : super(
@@ -2925,6 +3369,10 @@ class $$VaultItemsTableTableManager
                 Value<String> key = const Value.absent(),
                 Value<String> value = const Value.absent(),
                 Value<String?> category = const Value.absent(),
+                Value<String?> projectId = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => VaultItemsCompanion(
@@ -2932,6 +3380,10 @@ class $$VaultItemsTableTableManager
                 key: key,
                 value: value,
                 category: category,
+                projectId: projectId,
+                serverId: serverId,
+                isSynced: isSynced,
+                isDeleted: isDeleted,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -2941,6 +3393,10 @@ class $$VaultItemsTableTableManager
                 required String key,
                 required String value,
                 Value<String?> category = const Value.absent(),
+                Value<String?> projectId = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => VaultItemsCompanion.insert(
@@ -2948,13 +3404,62 @@ class $$VaultItemsTableTableManager
                 key: key,
                 value: value,
                 category: category,
+                projectId: projectId,
+                serverId: serverId,
+                isSynced: isSynced,
+                isDeleted: isDeleted,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$VaultItemsTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({projectId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (projectId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.projectId,
+                                referencedTable: $$VaultItemsTableReferences
+                                    ._projectIdTable(db),
+                                referencedColumn: $$VaultItemsTableReferences
+                                    ._projectIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ),
       );
 }
@@ -2969,9 +3474,9 @@ typedef $$VaultItemsTableProcessedTableManager =
       $$VaultItemsTableAnnotationComposer,
       $$VaultItemsTableCreateCompanionBuilder,
       $$VaultItemsTableUpdateCompanionBuilder,
-      (VaultItem, BaseReferences<_$AppDatabase, $VaultItemsTable, VaultItem>),
+      (VaultItem, $$VaultItemsTableReferences),
       VaultItem,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool projectId})
     >;
 
 class $AppDatabaseManager {

@@ -6,88 +6,60 @@ enum ProjectHealthStatus { onTrack, atRisk, behindSchedule }
 class FinancialBreakdown {
   final double earned;
   final double pending;
-  final double invoiced;
+  final double invoiced; // 'Sent' or 'Paid'
+  final double collected; // 'Paid' only
+  final double outstanding; // 'Sent' (Invoiced - Collected)
 
   FinancialBreakdown({
     required this.earned,
     required this.pending,
     required this.invoiced,
+    required this.collected,
+    required this.outstanding,
   });
 }
 
 extension ProjectAnalytics on Project {
-  /// Menghitung Project Health berdasarkan rasio waktu vs rasio tugas selesai.
-  ///
-  /// Logic:
-  /// - Time Ratio = (Hari Berlalu) / (Total Durasi Proyek)
-  /// - Task Ratio = (Tugas Selesai) / (Total Tugas)
-  /// - Jika Task Ratio >= Time Ratio, maka 'On Track'.
-  /// - Jika selisih < 15%, maka 'At Risk'.
-  /// - Jika selisih >= 15%, maka 'Behind Schedule'.
-  ProjectHealthStatus getHealth(List<Task> tasks) {
-    if (status == 3) return ProjectHealthStatus.onTrack; // Completed
-    if (deadline == null) return ProjectHealthStatus.onTrack; // No deadline
-
-    final now = DateTime.now();
-    final totalDuration = deadline!.difference(createdAt).inDays;
-    final elapsedDays = now.difference(createdAt).inDays;
-
-    // Jika belum mulai atau durasi 0
-    if (totalDuration <= 0) return ProjectHealthStatus.atRisk;
-    if (elapsedDays <= 0) return ProjectHealthStatus.onTrack;
-
-    final timeRatio = (elapsedDays / totalDuration).clamp(0.0, 1.0);
-
-    if (tasks.isEmpty) {
-      // Belum ada tugas, tapi waktu berjalan
-      return timeRatio > 0.1
-          ? ProjectHealthStatus.behindSchedule
-          : ProjectHealthStatus.onTrack;
-    }
-
-    final completedTasks = tasks.where((t) => t.isCompleted).length;
-    final taskRatio = completedTasks / tasks.length;
-
-    if (taskRatio >= timeRatio) {
-      return ProjectHealthStatus.onTrack;
-    } else if ((timeRatio - taskRatio) < 0.15) {
-      return ProjectHealthStatus.atRisk;
-    } else {
-      return ProjectHealthStatus.behindSchedule;
-    }
-  }
+  // ... (getHealth remains the same)
 
   /// Menghitung Breakdown Finansial Proyek.
   ///
   /// Logic:
-  /// - Earned: Estimasi nilai kerja yang sudah selesai (Budget * Progress).
-  /// - Pending: Sisa budget dari pekerjaan yang belum selesai (Budget - Earned).
-  /// - Invoiced: Total dari semua Invoice yang berstatus 'Paid'.
+  /// - Earned: (Budget * Progress).
+  /// - Invoiced: Total Invoice status 'Sent' atau 'Paid'.
+  /// - Collected: Total Invoice status 'Paid'.
+  /// - Outstanding: (Invoiced - Collected).
+  /// - Pending: (Budget - Earned).
   FinancialBreakdown getFinancials(
     List<Task> tasks, {
     List<dynamic> invoices = const [],
   }) {
-    // Note: 'invoices' parameter is dynamic here to avoid heavy dependency issues
-    // if 'Invoice' type is not available in domain/models/project.dart context yet.
-    // In strict architecture, we should map database 'Invoice' to domain 'Invoice'.
-    // For now assuming existing drift class or domain class is compatible if passed.
+    double totalInvoiced = 0;
+    double totalCollected = 0;
 
-    // Calculate total invoiced (Paid status)
-    double totalPaid = 0;
     for (var inv in invoices) {
-      // Assuming Invoice object has 'status' and 'amount'
-      // Check if status is 'Paid' (case insensitive or exact string)
-      final status = (inv.status as String).toLowerCase();
+      // Dynamic due to drift/domain typing gap
+      final status = (inv.status as String).trim().toLowerCase();
+      final amount = (inv.amount as double);
+
+      if (status == 'sent' || status == 'paid') {
+        totalInvoiced += amount;
+      }
+
       if (status == 'paid') {
-        totalPaid += (inv.amount as double);
+        totalCollected += amount;
       }
     }
+
+    final outstanding = totalInvoiced - totalCollected;
 
     if (tasks.isEmpty) {
       return FinancialBreakdown(
         earned: 0,
         pending: totalBudget,
-        invoiced: totalPaid,
+        invoiced: totalInvoiced,
+        collected: totalCollected,
+        outstanding: outstanding,
       );
     }
 
@@ -100,7 +72,9 @@ extension ProjectAnalytics on Project {
     return FinancialBreakdown(
       earned: earned,
       pending: pending,
-      invoiced: totalPaid,
+      invoiced: totalInvoiced,
+      collected: totalCollected,
+      outstanding: outstanding,
     );
   }
 

@@ -88,7 +88,6 @@ class SyncService {
         },
       );
     } catch (e) {
-      // Catch synchronous errors during listen setup
       debugPrint('Failed to subscribe to connectivity updates: $e');
     }
   }

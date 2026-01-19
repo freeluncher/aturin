@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/providers.dart';
 import '../../../data/repositories/vault_repository_impl.dart';
+import '../../../data/services/sync_service.dart';
 import '../../../domain/models/vault_item.dart';
 import '../../widgets/bento_card.dart';
 
@@ -138,8 +140,10 @@ class VaultScreen extends ConsumerWidget {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Delete Secret?'),
-                    content: const Text('This action cannot be undone.'),
+                    title: const Text('⚠️ PERINGATAN KEAMANAN'),
+                    content: const Text(
+                      'Apakah Anda yakin? Item ini akan dihapus secara permanen demi keamanan dan tidak dapat dipulihkan lagi.\n\nPastikan Anda sudah membackup jika diperlukan.',
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
@@ -149,12 +153,17 @@ class VaultScreen extends ConsumerWidget {
                         style: FilledButton.styleFrom(
                           backgroundColor: Theme.of(context).colorScheme.error,
                         ),
-                        onPressed: () {
-                          ref
+                        onPressed: () async {
+                          await ref
                               .read(vaultRepositoryProvider)
                               .deleteItem(existingItem.id);
-                          Navigator.pop(context); // Close confirm
-                          Navigator.pop(context); // Close edit
+                          // Trigger sync to update server immediately (Soft Delete)
+                          ref.read(syncServiceProvider).syncUp();
+
+                          if (context.mounted) {
+                            Navigator.pop(context); // Close confirm
+                            Navigator.pop(context); // Close edit
+                          }
                         },
                         child: const Text('Delete'),
                       ),
@@ -175,7 +184,7 @@ class VaultScreen extends ConsumerWidget {
             ),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               if (formKey.currentState!.validate()) {
                 final newItem = VaultItem(
                   id: existingItem?.id ?? const Uuid().v4(),
@@ -184,10 +193,18 @@ class VaultScreen extends ConsumerWidget {
                   category: categoryController.text.trim().isEmpty
                       ? null
                       : categoryController.text.trim(),
+                  projectId:
+                      existingItem?.projectId ??
+                      (defaultCategory != null
+                          ? null
+                          : null), // Handle projectId if passed
                   createdAt: existingItem?.createdAt ?? DateTime.now(),
                 );
-                ref.read(vaultRepositoryProvider).saveItem(newItem);
-                Navigator.pop(context);
+                await ref.read(vaultRepositoryProvider).saveItem(newItem);
+                // Trigger sync to update server immediately
+                ref.read(syncServiceProvider).syncUp();
+
+                if (context.mounted) Navigator.pop(context);
               }
             },
             child: const Text('Save'),

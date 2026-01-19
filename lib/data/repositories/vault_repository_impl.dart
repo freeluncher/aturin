@@ -62,28 +62,31 @@ class VaultRepositoryImpl implements VaultRepository {
 
   @override
   Stream<List<domain.VaultItem>> getAllItems() {
-    return _db.select(_db.vaultItems).watch().asyncMap((rows) async {
-      final items = <domain.VaultItem>[];
-      for (var row in rows) {
-        // Decrypt value before returning to Domain
-        final domainItem = VaultMapper.toDomain(row);
-        final decryptedValue = await _decrypt(domainItem.value);
-        items.add(
-          domain.VaultItem(
-            id: domainItem.id,
-            key: domainItem.key,
-            value: decryptedValue,
-            category: domainItem.category,
-            projectId: domainItem.projectId,
-            serverId: domainItem.serverId,
-            isSynced: domainItem.isSynced,
-            isDeleted: domainItem.isDeleted,
-            createdAt: domainItem.createdAt,
-          ),
-        );
-      }
-      return items;
-    });
+    return (_db.select(_db.vaultItems)
+          ..where((tbl) => tbl.isDeleted.equals(false)))
+        .watch()
+        .asyncMap((rows) async {
+          final items = <domain.VaultItem>[];
+          for (var row in rows) {
+            // Decrypt value before returning to Domain
+            final domainItem = VaultMapper.toDomain(row);
+            final decryptedValue = await _decrypt(domainItem.value);
+            items.add(
+              domain.VaultItem(
+                id: domainItem.id,
+                key: domainItem.key,
+                value: decryptedValue,
+                category: domainItem.category,
+                projectId: domainItem.projectId,
+                serverId: domainItem.serverId,
+                isSynced: domainItem.isSynced,
+                isDeleted: domainItem.isDeleted,
+                createdAt: domainItem.createdAt,
+              ),
+            );
+          }
+          return items;
+        });
   }
 
   @override

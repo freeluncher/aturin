@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:collection/collection.dart'; // For groupBy
+import 'package:collection/collection.dart';
 
 import '../../../core/providers.dart';
 import '../../../domain/models/project.dart';
@@ -11,26 +11,21 @@ import '../../widgets/filter_chips.dart';
 import 'add_edit_project_screen.dart';
 import 'project_detail_screen.dart';
 
-// View State Providers
-final projectSearchQueryProvider = StateProvider.autoDispose<String>(
-  (ref) => '',
-);
-final projectStatusFilterProvider = StateProvider.autoDispose<int?>(
-  (ref) => null,
-);
-final projectGroupByStatusProvider = StateProvider.autoDispose<bool>(
-  (ref) => false,
-);
-
-class ProjectListScreen extends ConsumerWidget {
+class ProjectListScreen extends ConsumerStatefulWidget {
   const ProjectListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProjectListScreen> createState() => _ProjectListScreenState();
+}
+
+class _ProjectListScreenState extends ConsumerState<ProjectListScreen> {
+  String _searchQuery = '';
+  int? _statusFilter;
+  bool _isGrouped = false;
+
+  @override
+  Widget build(BuildContext context) {
     final projectsStream = ref.watch(projectRepositoryProvider).getProjects();
-    final searchQuery = ref.watch(projectSearchQueryProvider);
-    final statusFilter = ref.watch(projectStatusFilterProvider);
-    final isGrouped = ref.watch(projectGroupByStatusProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -38,13 +33,14 @@ class ProjectListScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(
-              isGrouped ? LucideIcons.layers : LucideIcons.list,
-              color: isGrouped ? Theme.of(context).colorScheme.primary : null,
+              _isGrouped ? LucideIcons.layers : LucideIcons.list,
+              color: _isGrouped ? Theme.of(context).colorScheme.primary : null,
             ),
-            tooltip: isGrouped ? 'Ungroup' : 'Group by Status',
+            tooltip: _isGrouped ? 'Ungroup' : 'Group by Status',
             onPressed: () {
-              ref.read(projectGroupByStatusProvider.notifier).state =
-                  !isGrouped;
+              setState(() {
+                _isGrouped = !_isGrouped;
+              });
             },
           ),
         ],
@@ -62,13 +58,15 @@ class ProjectListScreen extends ConsumerWidget {
           var projects = snapshot.data ?? [];
 
           // 1. Filter by Status (Memory)
-          if (statusFilter != null) {
-            projects = projects.where((p) => p.status == statusFilter).toList();
+          if (_statusFilter != null) {
+            projects = projects
+                .where((p) => p.status == _statusFilter)
+                .toList();
           }
 
           // 2. Filter by Search Query (Memory)
-          if (searchQuery.isNotEmpty) {
-            final query = searchQuery.toLowerCase();
+          if (_searchQuery.isNotEmpty) {
+            final query = _searchQuery.toLowerCase();
             projects = projects.where((p) {
               return p.name.toLowerCase().contains(query) ||
                   p.description.toLowerCase().contains(query) ||
@@ -88,16 +86,18 @@ class ProjectListScreen extends ConsumerWidget {
                     AppSearchBar(
                       hintText: 'Search projects, clients...',
                       onChanged: (val) {
-                        ref.read(projectSearchQueryProvider.notifier).state =
-                            val;
+                        setState(() {
+                          _searchQuery = val;
+                        });
                       },
                     ),
                     const SizedBox(height: 12),
                     FilterChips<int>(
-                      selectedValue: statusFilter,
+                      selectedValue: _statusFilter,
                       onSelected: (val) {
-                        ref.read(projectStatusFilterProvider.notifier).state =
-                            val;
+                        setState(() {
+                          _statusFilter = val;
+                        });
                       },
                       options: const {
                         0: 'Planning',
@@ -131,8 +131,8 @@ class ProjectListScreen extends ConsumerWidget {
                           ],
                         ),
                       )
-                    : isGrouped
-                    ? _buildGroupedList(context, projects, ref)
+                    : _isGrouped
+                    ? _buildGroupedList(context, projects)
                     : _buildFlatList(projects),
               ),
             ],
@@ -163,11 +163,7 @@ class ProjectListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildGroupedList(
-    BuildContext context,
-    List<Project> projects,
-    WidgetRef ref,
-  ) {
+  Widget _buildGroupedList(BuildContext context, List<Project> projects) {
     // Determine sort/group order: Planning -> Active -> Testing -> Completed
     final groups = groupBy(projects, (p) => p.status);
     final sortedKeys = groups.keys.toList()..sort();
@@ -232,51 +228,6 @@ class ProjectListScreen extends ConsumerWidget {
       },
     );
   }
-
-  Color _getStatusColor(BuildContext context, int status) {
-    switch (status) {
-      case 0: // Planning
-        return Colors.blue;
-      case 1: // Active
-        return Colors.orange;
-      case 2: // Testing
-        return Colors.purple;
-      case 3: // Completed
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getStatusLabel(int status) {
-    switch (status) {
-      case 0:
-        return 'Planning';
-      case 1:
-        return 'Active';
-      case 2:
-        return 'Testing';
-      case 3:
-        return 'Completed';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  IconData _getStatusIcon(int status) {
-    switch (status) {
-      case 0:
-        return LucideIcons.fileText;
-      case 1:
-        return LucideIcons.rocket;
-      case 2:
-        return LucideIcons.flaskConical;
-      case 3:
-        return LucideIcons.checkCircle;
-      default:
-        return LucideIcons.helpCircle;
-    }
-  }
 }
 
 class _ProjectCard extends ConsumerWidget {
@@ -286,8 +237,6 @@ class _ProjectCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final parent = context.findAncestorWidgetOfExactType<ProjectListScreen>();
-
     return BentoCard(
       onTap: () {
         Navigator.push(
@@ -380,54 +329,50 @@ class _ProjectCard extends ConsumerWidget {
       ),
     );
   }
+}
 
-  // Define helpers here or import them?
-  // Since _ProjectCard is in the same file as Private helpers of ProjectListScreen, it cannot access private members of another class easily unless they are top level or static.
-  // To avoid duplication, I will make the helper methods static or top-level, OR just copy them.
-  // Actually, I can just make them top-level private functions in the file.
-
-  Color _getStatusColor(BuildContext context, int status) {
-    switch (status) {
-      case 0: // Planning
-        return Colors.blue;
-      case 1: // Active
-        return Colors.orange;
-      case 2: // Testing
-        return Colors.purple;
-      case 3: // Completed
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
+// Top-level helpers to be accessible by both classes
+Color _getStatusColor(BuildContext context, int status) {
+  switch (status) {
+    case 0: // Planning
+      return Colors.blue;
+    case 1: // Active
+      return Colors.orange;
+    case 2: // Testing
+      return Colors.purple;
+    case 3: // Completed
+      return Colors.green;
+    default:
+      return Colors.grey;
   }
+}
 
-  String _getStatusLabel(int status) {
-    switch (status) {
-      case 0:
-        return 'Planning';
-      case 1:
-        return 'Active';
-      case 2:
-        return 'Testing';
-      case 3:
-        return 'Completed';
-      default:
-        return 'Unknown';
-    }
+String _getStatusLabel(int status) {
+  switch (status) {
+    case 0:
+      return 'Planning';
+    case 1:
+      return 'Active';
+    case 2:
+      return 'Testing';
+    case 3:
+      return 'Completed';
+    default:
+      return 'Unknown';
   }
+}
 
-  IconData _getStatusIcon(int status) {
-    switch (status) {
-      case 0:
-        return LucideIcons.fileText;
-      case 1:
-        return LucideIcons.rocket;
-      case 2:
-        return LucideIcons.flaskConical;
-      case 3:
-        return LucideIcons.checkCircle;
-      default:
-        return LucideIcons.helpCircle;
-    }
+IconData _getStatusIcon(int status) {
+  switch (status) {
+    case 0:
+      return LucideIcons.fileText;
+    case 1:
+      return LucideIcons.rocket;
+    case 2:
+      return LucideIcons.flaskConical;
+    case 3:
+      return LucideIcons.checkCircle;
+    default:
+      return LucideIcons.helpCircle;
   }
 }

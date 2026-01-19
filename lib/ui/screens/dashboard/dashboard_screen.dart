@@ -377,19 +377,49 @@ class _DashboardHome extends ConsumerWidget {
                 ),
               ),
 
-              // 3. CONTEXT: Revenue (Top Right, 1x1) - Placeholder
+              // 3. CONTEXT: Revenue (Top Right, 1x1)
               StaggeredGridTile.count(
                 crossAxisCellCount: 1,
                 mainAxisCellCount: 1,
-                child: BentoCard(
-                  title: 'Revenue',
-                  icon: LucideIcons.wallet,
-                  child: Center(
-                    child: Text(
-                      '15jt', // Compact
-                      style: theme.textTheme.headlineMedium,
-                    ),
-                  ),
+                child: StreamBuilder<List<domain.Project>>(
+                  stream: ref.watch(projectRepositoryProvider).getProjects(),
+                  builder: (context, snapshot) {
+                    final projects = snapshot.data ?? [];
+                    final totalRevenue = projects
+                        .where((p) => !p.isDeleted)
+                        .fold<double>(
+                          0.0,
+                          (sum, item) => sum + item.amountPaid,
+                        );
+
+                    String formattedRevenue;
+                    if (totalRevenue >= 1000000000) {
+                      formattedRevenue =
+                          '${(totalRevenue / 1000000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}M';
+                    } else if (totalRevenue >= 1000000) {
+                      formattedRevenue =
+                          '${(totalRevenue / 1000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}jt';
+                    } else if (totalRevenue >= 1000) {
+                      formattedRevenue =
+                          '${(totalRevenue / 1000).toStringAsFixed(0)}rb';
+                    } else {
+                      formattedRevenue = totalRevenue.toStringAsFixed(0);
+                    }
+
+                    return BentoCard(
+                      title: 'Revenue',
+                      icon: LucideIcons.wallet,
+                      child: Center(
+                        child: Text(
+                          formattedRevenue,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
 

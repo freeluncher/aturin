@@ -11,6 +11,7 @@ import '../projects/project_list_screen.dart';
 import '../tasks/task_list_screen.dart';
 import '../projects/add_edit_project_screen.dart';
 import '../vault/vault_screen.dart';
+import '../../widgets/connectivity_indicator.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -24,24 +25,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth > 900) {
-          return _DesktopLayout(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) {
-              setState(() => _selectedIndex = index);
-            },
-          );
-        } else {
-          return _MobileLayout(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) {
-              setState(() => _selectedIndex = index);
-            },
-          );
-        }
-      },
+    return Stack(
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth > 900) {
+              return _DesktopLayout(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) {
+                  setState(() => _selectedIndex = index);
+                },
+              );
+            } else {
+              return _MobileLayout(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) {
+                  setState(() => _selectedIndex = index);
+                },
+              );
+            }
+          },
+        ),
+        const ConnectivityIndicator(),
+      ],
     );
   }
 }

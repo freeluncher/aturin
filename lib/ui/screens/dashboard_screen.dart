@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../core/providers.dart';
 import '../widgets/bento_card.dart';
 import 'project_list_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth > 900) {
@@ -22,11 +24,11 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-class _DesktopLayout extends StatelessWidget {
+class _DesktopLayout extends ConsumerWidget {
   const _DesktopLayout();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -47,15 +49,25 @@ class _DesktopLayout extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 32),
-                _SidebarItem(
+                const _SidebarItem(
                   icon: LucideIcons.layoutDashboard,
                   label: 'Dashboard',
                   isActive: true,
                 ),
-                _SidebarItem(icon: LucideIcons.folder, label: 'Projects'),
-                _SidebarItem(icon: LucideIcons.checkSquare, label: 'Tasks'),
+                const _SidebarItem(icon: LucideIcons.folder, label: 'Projects'),
+                const _SidebarItem(
+                  icon: LucideIcons.checkSquare,
+                  label: 'Tasks',
+                ),
                 const Spacer(),
-                _SidebarItem(icon: LucideIcons.settings, label: 'Settings'),
+                _SidebarItem(
+                  icon: LucideIcons.logOut,
+                  label: 'Logout',
+                  onTap: () {
+                    ref.read(authRepositoryProvider).signOut();
+                    // AuthWrapper will handle navigation
+                  },
+                ),
                 const SizedBox(height: 32),
               ],
             ),
@@ -160,15 +172,25 @@ class _DesktopLayout extends StatelessWidget {
   }
 }
 
-class _MobileLayout extends StatelessWidget {
+class _MobileLayout extends ConsumerWidget {
   const _MobileLayout();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Atur.in')),
+      appBar: AppBar(
+        title: const Text('Atur.in'),
+        actions: [
+          IconButton(
+            icon: const Icon(LucideIcons.logOut),
+            onPressed: () {
+              ref.read(authRepositoryProvider).signOut();
+            },
+          ),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: 0,
         destinations: const [
@@ -272,11 +294,13 @@ class _SidebarItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isActive;
+  final VoidCallback? onTap;
 
   const _SidebarItem({
     required this.icon,
     required this.label,
     this.isActive = false,
+    this.onTap,
   });
 
   @override
@@ -301,10 +325,8 @@ class _SidebarItem extends StatelessWidget {
           ),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        tileColor: isActive
-            ? theme.colorScheme.primary.withValues(alpha: 0.1)
-            : null,
-        onTap: () {},
+        tileColor: isActive ? theme.colorScheme.primary.withOpacity(0.1) : null,
+        onTap: onTap ?? () {},
       ),
     );
   }

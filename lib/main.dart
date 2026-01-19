@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/supabase_config.dart';
-import 'ui/screens/dashboard_screen.dart';
+import 'ui/screens/auth/auth_wrapper.dart';
 
 void main() async {
   // Ensure widgets are initialized
@@ -31,7 +31,7 @@ class MainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Atur.in',
       theme: AppTheme.darkTheme,
-      home: const DashboardScreen(),
+      home: const AuthWrapper(),
     );
   }
 }

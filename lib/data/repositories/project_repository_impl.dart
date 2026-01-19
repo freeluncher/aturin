@@ -48,6 +48,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
           'description': project.description,
           'created_at': project.createdAt.toIso8601String(),
           'last_updated': project.lastUpdated.toIso8601String(),
+          'deadline': project.deadline?.toIso8601String(),
           'is_deleted': project.isDeleted,
         });
         await (_db.update(_db.projects)..where((t) => t.id.equals(project.id)))
@@ -77,6 +78,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
               'name': project.name,
               'description': project.description,
               'last_updated': DateTime.now().toIso8601String(),
+              'deadline': project.deadline?.toIso8601String(),
               'is_deleted': project.isDeleted,
             })
             .eq('id', project.id);
@@ -242,6 +244,11 @@ class ProjectRepositoryImpl implements ProjectRepository {
                     DateTime.parse(data['created_at'] as String),
                   ),
                   lastUpdated: Value(serverUpdatedAt),
+                  deadline: Value(
+                    data['deadline'] != null
+                        ? DateTime.parse(data['deadline'] as String)
+                        : null,
+                  ),
                   isSynced: const Value(true),
                   isDeleted: Value(data['is_deleted'] as bool? ?? false),
                 ),
@@ -256,6 +263,11 @@ class ProjectRepositoryImpl implements ProjectRepository {
                 name: Value(data['name'] as String),
                 description: Value(data['description'] as String),
                 lastUpdated: Value(serverUpdatedAt),
+                deadline: Value(
+                  data['deadline'] != null
+                      ? DateTime.parse(data['deadline'] as String)
+                      : null,
+                ),
                 isSynced: const Value(true),
                 isDeleted: Value(data['is_deleted'] as bool? ?? false),
               ),

@@ -73,6 +73,17 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _deadlineMeta = const VerificationMeta(
+    'deadline',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deadline = GeneratedColumn<DateTime>(
+    'deadline',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _isSyncedMeta = const VerificationMeta(
     'isSynced',
   );
@@ -111,6 +122,7 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     description,
     createdAt,
     lastUpdated,
+    deadline,
     isSynced,
     isDeleted,
   ];
@@ -169,6 +181,12 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         ),
       );
     }
+    if (data.containsKey('deadline')) {
+      context.handle(
+        _deadlineMeta,
+        deadline.isAcceptableOrUnknown(data['deadline']!, _deadlineMeta),
+      );
+    }
     if (data.containsKey('is_synced')) {
       context.handle(
         _isSyncedMeta,
@@ -214,6 +232,10 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_updated'],
       )!,
+      deadline: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deadline'],
+      ),
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
@@ -238,6 +260,7 @@ class Project extends DataClass implements Insertable<Project> {
   final String description;
   final DateTime createdAt;
   final DateTime lastUpdated;
+  final DateTime? deadline;
   final bool isSynced;
   final bool isDeleted;
   const Project({
@@ -247,6 +270,7 @@ class Project extends DataClass implements Insertable<Project> {
     required this.description,
     required this.createdAt,
     required this.lastUpdated,
+    this.deadline,
     required this.isSynced,
     required this.isDeleted,
   });
@@ -261,6 +285,9 @@ class Project extends DataClass implements Insertable<Project> {
     map['description'] = Variable<String>(description);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['last_updated'] = Variable<DateTime>(lastUpdated);
+    if (!nullToAbsent || deadline != null) {
+      map['deadline'] = Variable<DateTime>(deadline);
+    }
     map['is_synced'] = Variable<bool>(isSynced);
     map['is_deleted'] = Variable<bool>(isDeleted);
     return map;
@@ -276,6 +303,9 @@ class Project extends DataClass implements Insertable<Project> {
       description: Value(description),
       createdAt: Value(createdAt),
       lastUpdated: Value(lastUpdated),
+      deadline: deadline == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deadline),
       isSynced: Value(isSynced),
       isDeleted: Value(isDeleted),
     );
@@ -293,6 +323,7 @@ class Project extends DataClass implements Insertable<Project> {
       description: serializer.fromJson<String>(json['description']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       lastUpdated: serializer.fromJson<DateTime>(json['lastUpdated']),
+      deadline: serializer.fromJson<DateTime?>(json['deadline']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
     );
@@ -307,6 +338,7 @@ class Project extends DataClass implements Insertable<Project> {
       'description': serializer.toJson<String>(description),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'lastUpdated': serializer.toJson<DateTime>(lastUpdated),
+      'deadline': serializer.toJson<DateTime?>(deadline),
       'isSynced': serializer.toJson<bool>(isSynced),
       'isDeleted': serializer.toJson<bool>(isDeleted),
     };
@@ -319,6 +351,7 @@ class Project extends DataClass implements Insertable<Project> {
     String? description,
     DateTime? createdAt,
     DateTime? lastUpdated,
+    Value<DateTime?> deadline = const Value.absent(),
     bool? isSynced,
     bool? isDeleted,
   }) => Project(
@@ -328,6 +361,7 @@ class Project extends DataClass implements Insertable<Project> {
     description: description ?? this.description,
     createdAt: createdAt ?? this.createdAt,
     lastUpdated: lastUpdated ?? this.lastUpdated,
+    deadline: deadline.present ? deadline.value : this.deadline,
     isSynced: isSynced ?? this.isSynced,
     isDeleted: isDeleted ?? this.isDeleted,
   );
@@ -343,6 +377,7 @@ class Project extends DataClass implements Insertable<Project> {
       lastUpdated: data.lastUpdated.present
           ? data.lastUpdated.value
           : this.lastUpdated,
+      deadline: data.deadline.present ? data.deadline.value : this.deadline,
       isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
     );
@@ -357,6 +392,7 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('description: $description, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastUpdated: $lastUpdated, ')
+          ..write('deadline: $deadline, ')
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted')
           ..write(')'))
@@ -371,6 +407,7 @@ class Project extends DataClass implements Insertable<Project> {
     description,
     createdAt,
     lastUpdated,
+    deadline,
     isSynced,
     isDeleted,
   );
@@ -384,6 +421,7 @@ class Project extends DataClass implements Insertable<Project> {
           other.description == this.description &&
           other.createdAt == this.createdAt &&
           other.lastUpdated == this.lastUpdated &&
+          other.deadline == this.deadline &&
           other.isSynced == this.isSynced &&
           other.isDeleted == this.isDeleted);
 }
@@ -395,6 +433,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<String> description;
   final Value<DateTime> createdAt;
   final Value<DateTime> lastUpdated;
+  final Value<DateTime?> deadline;
   final Value<bool> isSynced;
   final Value<bool> isDeleted;
   final Value<int> rowid;
@@ -405,6 +444,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.description = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastUpdated = const Value.absent(),
+    this.deadline = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -416,6 +456,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     required String description,
     this.createdAt = const Value.absent(),
     this.lastUpdated = const Value.absent(),
+    this.deadline = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -428,6 +469,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Expression<String>? description,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? lastUpdated,
+    Expression<DateTime>? deadline,
     Expression<bool>? isSynced,
     Expression<bool>? isDeleted,
     Expression<int>? rowid,
@@ -439,6 +481,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       if (description != null) 'description': description,
       if (createdAt != null) 'created_at': createdAt,
       if (lastUpdated != null) 'last_updated': lastUpdated,
+      if (deadline != null) 'deadline': deadline,
       if (isSynced != null) 'is_synced': isSynced,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (rowid != null) 'rowid': rowid,
@@ -452,6 +495,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Value<String>? description,
     Value<DateTime>? createdAt,
     Value<DateTime>? lastUpdated,
+    Value<DateTime?>? deadline,
     Value<bool>? isSynced,
     Value<bool>? isDeleted,
     Value<int>? rowid,
@@ -463,6 +507,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      deadline: deadline ?? this.deadline,
       isSynced: isSynced ?? this.isSynced,
       isDeleted: isDeleted ?? this.isDeleted,
       rowid: rowid ?? this.rowid,
@@ -490,6 +535,9 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (lastUpdated.present) {
       map['last_updated'] = Variable<DateTime>(lastUpdated.value);
     }
+    if (deadline.present) {
+      map['deadline'] = Variable<DateTime>(deadline.value);
+    }
     if (isSynced.present) {
       map['is_synced'] = Variable<bool>(isSynced.value);
     }
@@ -511,6 +559,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('description: $description, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastUpdated: $lastUpdated, ')
+          ..write('deadline: $deadline, ')
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('rowid: $rowid')
@@ -1171,6 +1220,7 @@ typedef $$ProjectsTableCreateCompanionBuilder =
       required String description,
       Value<DateTime> createdAt,
       Value<DateTime> lastUpdated,
+      Value<DateTime?> deadline,
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -1183,6 +1233,7 @@ typedef $$ProjectsTableUpdateCompanionBuilder =
       Value<String> description,
       Value<DateTime> createdAt,
       Value<DateTime> lastUpdated,
+      Value<DateTime?> deadline,
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -1248,6 +1299,11 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<DateTime> get lastUpdated => $composableBuilder(
     column: $table.lastUpdated,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deadline => $composableBuilder(
+    column: $table.deadline,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1326,6 +1382,11 @@ class $$ProjectsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get deadline => $composableBuilder(
+    column: $table.deadline,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isSynced => $composableBuilder(
     column: $table.isSynced,
     builder: (column) => ColumnOrderings(column),
@@ -1367,6 +1428,9 @@ class $$ProjectsTableAnnotationComposer
     column: $table.lastUpdated,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get deadline =>
+      $composableBuilder(column: $table.deadline, builder: (column) => column);
 
   GeneratedColumn<bool> get isSynced =>
       $composableBuilder(column: $table.isSynced, builder: (column) => column);
@@ -1434,6 +1498,7 @@ class $$ProjectsTableTableManager
                 Value<String> description = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastUpdated = const Value.absent(),
+                Value<DateTime?> deadline = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -1444,6 +1509,7 @@ class $$ProjectsTableTableManager
                 description: description,
                 createdAt: createdAt,
                 lastUpdated: lastUpdated,
+                deadline: deadline,
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 rowid: rowid,
@@ -1456,6 +1522,7 @@ class $$ProjectsTableTableManager
                 required String description,
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastUpdated = const Value.absent(),
+                Value<DateTime?> deadline = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -1466,6 +1533,7 @@ class $$ProjectsTableTableManager
                 description: description,
                 createdAt: createdAt,
                 lastUpdated: lastUpdated,
+                deadline: deadline,
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 rowid: rowid,

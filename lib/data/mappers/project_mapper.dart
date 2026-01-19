@@ -11,6 +11,7 @@ extension ProjectMapper on Project {
       description: description,
       createdAt: createdAt,
       lastUpdated: lastUpdated,
+      deadline: deadline,
       isSynced: isSynced,
       isDeleted: isDeleted,
     );
@@ -26,6 +27,7 @@ extension DomainProjectMapper on domain.Project {
       description: Value(description),
       createdAt: Value(createdAt),
       lastUpdated: Value(lastUpdated),
+      deadline: Value(deadline),
       isSynced: Value(isSynced),
       isDeleted: Value(isDeleted),
     );

@@ -5,6 +5,7 @@ class Project {
   final String description;
   final DateTime createdAt;
   final DateTime lastUpdated;
+  final DateTime? deadline;
   final bool isSynced;
   final bool isDeleted;
 
@@ -15,6 +16,7 @@ class Project {
     required this.description,
     required this.createdAt,
     required this.lastUpdated,
+    this.deadline,
     this.isSynced = false,
     this.isDeleted = false,
   });

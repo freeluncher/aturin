@@ -20,6 +20,7 @@ class Projects extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get lastUpdated =>
       dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deadline => dateTime().nullable()();
 
   // Sync flags
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
@@ -63,7 +64,22 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+          // We added the 'deadline' column in v2
+          await m.addColumn(projects, projects.deadline);
+        }
+      },
+    );
+  }
 }
 
 LazyDatabase _openConnection() {

@@ -19,6 +19,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _descController;
+  DateTime? _selectedDeadline;
   bool _isLoading = false;
 
   @override
@@ -28,6 +29,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
     _descController = TextEditingController(
       text: widget.project?.description ?? '',
     );
+    _selectedDeadline = widget.project?.deadline;
   }
 
   @override
@@ -52,6 +54,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
           description: _descController.text.trim(),
           createdAt: now,
           lastUpdated: now,
+          deadline: _selectedDeadline,
         );
         await ref.read(projectRepositoryProvider).createProject(newProject);
       } else {
@@ -62,6 +65,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
           description: _descController.text.trim(),
           createdAt: widget.project!.createdAt,
           lastUpdated: now,
+          deadline: _selectedDeadline,
           serverId: widget.project!.serverId,
           isSynced: false, // Mark as unsynced so it pushes to server
           isDeleted: widget.project!.isDeleted,
@@ -104,6 +108,37 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
                 controller: _descController,
                 decoration: const InputDecoration(labelText: 'Description'),
                 maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Deadline (Optional)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.calendar_today),
+                ),
+                child: InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _selectedDeadline ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(
+                        const Duration(days: 365),
+                      ),
+                      lastDate: DateTime.now().add(
+                        const Duration(days: 365 * 5),
+                      ),
+                    );
+                    if (picked != null) {
+                      setState(() => _selectedDeadline = picked);
+                    }
+                  },
+                  child: Text(
+                    _selectedDeadline != null
+                        ? '${_selectedDeadline!.day}/${_selectedDeadline!.month}/${_selectedDeadline!.year}'
+                        : 'Select Date',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
               SizedBox(

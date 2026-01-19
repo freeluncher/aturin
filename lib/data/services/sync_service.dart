@@ -116,6 +116,7 @@ class SyncService {
         'description': project.description,
         'created_at': project.createdAt.toIso8601String(),
         'last_updated': project.lastUpdated.toIso8601String(),
+        'deadline': project.deadline?.toIso8601String(),
         'is_deleted': project.isDeleted,
       };
 
@@ -151,6 +152,11 @@ class SyncService {
                 description: data['description'] as String,
                 createdAt: Value(DateTime.parse(data['created_at'] as String)),
                 lastUpdated: Value(serverUpdatedAt),
+                deadline: Value(
+                  data['deadline'] != null
+                      ? DateTime.parse(data['deadline'] as String)
+                      : null,
+                ),
                 isSynced: const Value(true),
                 isDeleted: Value(data['is_deleted'] as bool? ?? false),
               ),
@@ -162,6 +168,11 @@ class SyncService {
               name: Value(data['name'] as String),
               description: Value(data['description'] as String),
               lastUpdated: Value(serverUpdatedAt),
+              deadline: Value(
+                data['deadline'] != null
+                    ? DateTime.parse(data['deadline'] as String)
+                    : null,
+              ),
               isSynced: const Value(true),
               isDeleted: Value(data['is_deleted'] as bool? ?? false),
             ),

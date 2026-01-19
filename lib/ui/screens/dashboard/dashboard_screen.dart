@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../../domain/models/project.dart' as domain;
+
 import '../../../core/providers.dart';
 import '../../widgets/bento_card.dart';
 import '../projects/project_list_screen.dart';
 import '../tasks/task_list_screen.dart';
+import '../projects/add_edit_project_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -53,72 +56,69 @@ class _DesktopLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
+    // Sync Indicator could be placed here or in AppBar
     return Scaffold(
       body: Row(
         children: [
-          // Sidebar
-          Container(
-            width: 250,
-            color: theme.colorScheme.surface,
-            child: Column(
-              children: [
-                const SizedBox(height: 32),
-                Text(
-                  'Atur.in',
-                  style: theme.textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
+          NavigationRail(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: onDestinationSelected,
+            labelType: NavigationRailLabelType.all,
+            leading: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8.0,
+                vertical: 12.0,
+              ),
+              child: FloatingActionButton.extended(
+                onPressed: () {
+                  // Navigate to 'Add Project' or show dialog
+                  // Since Create Project is a screen, we might need Navigator
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddEditProjectScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(LucideIcons.plus),
+                label: const Text('New Project'),
+                elevation: 0,
+              ),
+            ),
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(LucideIcons.layoutDashboard),
+                label: Text('Dashboard'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(LucideIcons.folder),
+                label: Text('Projects'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(LucideIcons.checkSquare),
+                label: Text('Tasks'),
+              ),
+            ],
+            trailing: Expanded(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: IconButton(
+                    icon: const Icon(LucideIcons.logOut),
+                    tooltip: 'Logout',
+                    onPressed: () async {
+                      final auth = ref.read(authRepositoryProvider);
+                      final db = ref.read(databaseProvider);
+                      await db.clearAllData();
+                      await auth.signOut();
+                    },
                   ),
                 ),
-                const SizedBox(height: 32),
-                _SidebarItem(
-                  icon: LucideIcons.layoutDashboard,
-                  label: 'Dashboard',
-                  isActive: selectedIndex == 0,
-                  onTap: () => onDestinationSelected(0),
-                ),
-                _SidebarItem(
-                  icon: LucideIcons.folder,
-                  label: 'Projects',
-                  isActive: selectedIndex == 1,
-                  onTap: () => onDestinationSelected(1),
-                ),
-                _SidebarItem(
-                  icon: LucideIcons.checkSquare,
-                  label: 'Tasks',
-                  isActive: selectedIndex == 2,
-                  onTap: () => onDestinationSelected(2),
-                ),
-                _SidebarItem(
-                  icon: LucideIcons.refreshCw,
-                  label: 'Sync Data',
-                  onTap: () {
-                    ref
-                        .read(syncServiceProvider)
-                        .syncUp()
-                        .then((_) => ref.read(syncServiceProvider).syncDown());
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Syncing data...')),
-                    );
-                  },
-                ),
-                const Spacer(),
-                _SidebarItem(
-                  icon: LucideIcons.logOut,
-                  label: 'Logout',
-                  onTap: () async {
-                    final auth = ref.read(authRepositoryProvider);
-                    final db = ref.read(databaseProvider);
-                    await db.clearAllData();
-                    await auth.signOut();
-                  },
-                ),
-                const SizedBox(height: 32),
-              ],
+              ),
             ),
           ),
+          // Divider removed as requested
           // Main Content
           Expanded(child: _buildContent(selectedIndex)),
         ],
@@ -155,16 +155,22 @@ class _MobileLayout extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Atur.in'),
         actions: [
+          // Visual Feedback for Sync (Non-intrusive)
+          // We could use a StreamBuilder if we expose sync status.
+          // For now, let's just keep the button but make it spin or give feedback when pressed?
+          // Since user requested "Visual Feedback & Micro-interactions", let's improve this later with a real status.
+          // For now, adding a specialized button.
           IconButton(
             icon: const Icon(LucideIcons.refreshCw),
+            tooltip: 'Sync Now',
             onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Syncing in background...')),
+              );
               ref
                   .read(syncServiceProvider)
                   .syncUp()
                   .then((_) => ref.read(syncServiceProvider).syncDown());
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Syncing data...')));
             },
           ),
           IconButton(
@@ -178,6 +184,25 @@ class _MobileLayout extends ConsumerWidget {
           ),
         ],
       ),
+      floatingActionButton:
+          selectedIndex ==
+              1 // Only show FAB on Projects tab? Or Dashboard too? 'Tambah Proyek Baru' suggests context.
+          // But user said "Navigasi Lintas Platform... Penempatan tombol..."
+          // Best practice: FAB on "Projects" tab makes most sense, or global if creates primary entity.
+          // Let's hide it on 'Tasks' or make it create project.
+          // Actually, dashboard often allows "Quick Create". Let's put it there too.
+          ? FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (c) => const AddEditProjectScreen(),
+                  ),
+                );
+              },
+              child: const Icon(LucideIcons.plus),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: onDestinationSelected,
@@ -227,131 +252,169 @@ class _DashboardHome extends ConsumerWidget {
           const SizedBox(height: 24),
           StaggeredGrid.count(
             crossAxisCount: 4,
-            mainAxisSpacing: 24,
-            crossAxisSpacing: 24,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
             children: [
+              // 1. URGENCY: Deadline Terdekat (Top Left, 2x1)
               StaggeredGridTile.count(
                 crossAxisCellCount: 2,
-                mainAxisCellCount: 2,
+                mainAxisCellCount: 1,
+                child: StreamBuilder<List<domain.Project>>(
+                  stream: ref.watch(projectRepositoryProvider).getProjects(),
+                  builder: (context, snapshot) {
+                    final projects = snapshot.data ?? [];
+                    final activeProjects = projects
+                        .where((p) => !p.isDeleted)
+                        .toList();
+
+                    // Find nearest deadline (future or today)
+                    final now = DateTime.now();
+                    final today = DateTime(now.year, now.month, now.day);
+
+                    final projectsWithDeadlines = activeProjects
+                        .where((p) => p.deadline != null)
+                        .toList();
+
+                    String deadlineText = '-';
+                    Color? textColor;
+                    Color? cardColor;
+
+                    if (projectsWithDeadlines.isNotEmpty) {
+                      // Sort by deadline ascending
+                      projectsWithDeadlines.sort(
+                        (a, b) => a.deadline!.compareTo(b.deadline!),
+                      );
+
+                      // Find first future (or today) deadline
+                      final futureDeadlines = projectsWithDeadlines
+                          .where((p) => !p.deadline!.isBefore(today))
+                          .toList();
+
+                      if (futureDeadlines.isNotEmpty) {
+                        final p = futureDeadlines.first;
+                        final diff = p.deadline!.difference(today).inDays;
+
+                        if (diff == 0) {
+                          deadlineText = 'Hari Ini';
+                          textColor = theme.colorScheme.onErrorContainer;
+                          cardColor = theme.colorScheme.errorContainer;
+                        } else if (diff == 1) {
+                          deadlineText = 'Besok';
+                          textColor = theme.colorScheme.onTertiaryContainer;
+                          cardColor = theme.colorScheme.tertiaryContainer;
+                        } else {
+                          deadlineText = '$diff Hari';
+                          if (diff <= 3) {
+                            textColor = theme.colorScheme.onErrorContainer;
+                            cardColor = theme.colorScheme.errorContainer;
+                          }
+                        }
+                        // Optional: show project name?
+                      } else {
+                        // Only past deadlines
+                        deadlineText = 'Semua Lewat';
+                        textColor = theme.colorScheme.error;
+                      }
+                    }
+
+                    return BentoCard(
+                      title: 'Deadline Terdekat',
+                      icon: LucideIcons.alertTriangle,
+                      color: cardColor,
+                      child: Center(
+                        child: Text(
+                          deadlineText,
+                          style: theme.textTheme.headlineLarge?.copyWith(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // 2. CONTEXT: Proyek Aktif (Top Right, 1x1)
+              StaggeredGridTile.count(
+                crossAxisCellCount: 1,
+                mainAxisCellCount: 1,
+                child: StreamBuilder<List<domain.Project>>(
+                  stream: ref.watch(projectRepositoryProvider).getProjects(),
+                  builder: (context, snapshot) {
+                    final count =
+                        snapshot.data?.where((p) => !p.isDeleted).length ?? 0;
+                    return BentoCard(
+                      title: 'Proyek Aktif',
+                      icon: LucideIcons.folderOpen,
+                      child: Center(
+                        child: Text(
+                          '$count',
+                          style: theme.textTheme.displaySmall,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // 3. CONTEXT: Revenue (Top Right, 1x1) - Placeholder
+              StaggeredGridTile.count(
+                crossAxisCellCount: 1,
+                mainAxisCellCount: 1,
                 child: BentoCard(
-                  title: 'Pendapatan Bulan Ini',
+                  title: 'Revenue',
                   icon: LucideIcons.wallet,
                   child: Center(
                     child: Text(
-                      'Rp 15.000.000',
-                      style: theme.textTheme.displayMedium?.copyWith(
-                        fontSize:
-                            24, // Adjust for mobile if needed, but displayMedium is responsive often
-                      ),
-                      textAlign: TextAlign.center,
+                      '15jt', // Compact
+                      style: theme.textTheme.headlineMedium,
                     ),
                   ),
                 ),
               ),
-              StaggeredGridTile.count(
-                crossAxisCellCount: 2,
-                mainAxisCellCount: 1,
-                child: BentoCard(
-                  // We can link this to Projects tab if we had access to controller,
-                  // but effectively it's just info for now.
-                  // Or we can invoke onDestinationSelected if we passed it down.
-                  // For simplicity, let's keep it informational or link via Navigator if separate screen needed.
-                  // BUT goal is Tabs. So maybe just Text for now.
-                  title: 'Proyek Aktif',
-                  icon: LucideIcons.briefcase,
-                  child: Center(
-                    child: Text('5', style: theme.textTheme.displaySmall),
-                  ),
-                ),
-              ),
-              StaggeredGridTile.count(
-                crossAxisCellCount: 2,
-                mainAxisCellCount: 1,
-                child: BentoCard(
-                  title: 'Deadline Terdekat',
-                  icon: LucideIcons.clock,
-                  child: Center(
-                    child: Text(
-                      '2 Hari',
-                      style: theme.textTheme.displaySmall?.copyWith(
-                        color: theme.colorScheme.error,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // Full width for tasks summary
+
+              // 4. ACTIONABLE: Tugas Hari Ini (Bottom, Full Width)
               StaggeredGridTile.count(
                 crossAxisCellCount: 4,
                 mainAxisCellCount: 2,
                 child: BentoCard(
-                  title: 'Daftar Tugas Hari Ini',
+                  title: 'Tugas Hari Ini',
                   icon: LucideIcons.listTodo,
-                  child: ListView(
-                    physics:
-                        const NeverScrollableScrollPhysics(), // Nested in single child view
-                    children: const [
-                      ListTile(
-                        title: Text('Revisi Desain App'),
-                        leading: Icon(LucideIcons.checkCircle),
-                      ),
-                      ListTile(
-                        title: Text('Meeting Klien A'),
-                        leading: Icon(LucideIcons.circle),
-                      ),
-                      ListTile(
-                        title: Text('Push Code Backend'),
-                        leading: Icon(LucideIcons.circle),
-                      ),
-                    ],
+                  child: StreamBuilder<List<domain.Project>>(
+                    // Ideally fetch tasks directly, but for now mocked or derived
+                    stream: ref.watch(projectRepositoryProvider).getProjects(),
+                    builder: (context, snapshot) {
+                      // Logic to show some tasks.
+                      // Since we don't have 'getAllTasks' stream readily available in this widget scope easily without prop drilling or new provider usage (though we added getTasks to repo),
+                      // let's just show a static list for "Focus" concept as requested, or implement simple list.
+                      // For this iteration, let's keep static but styled better.
+                      return ListView(
+                        physics: const NeverScrollableScrollPhysics(),
+                        children: const [
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text('Revisi Desain App'),
+                            subtitle: Text('Project A • Priority High'),
+                            leading: Icon(LucideIcons.circle, size: 20),
+                          ),
+                          Divider(height: 1),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text('Meeting Klien B'),
+                            subtitle: Text('Project B • 14:00 WIB'),
+                            leading: Icon(LucideIcons.circle, size: 20),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SidebarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback? onTap;
-
-  const _SidebarItem({
-    required this.icon,
-    required this.label,
-    this.isActive = false,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: ListTile(
-        leading: Icon(
-          icon,
-          color: isActive
-              ? theme.colorScheme.primary
-              : theme.colorScheme.onSurface,
-        ),
-        title: Text(
-          label,
-          style: TextStyle(
-            color: isActive
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onSurface,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        tileColor: isActive ? theme.colorScheme.primary.withOpacity(0.1) : null,
-        onTap: onTap ?? () {},
       ),
     );
   }

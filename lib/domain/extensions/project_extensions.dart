@@ -48,13 +48,7 @@ extension ProjectExtensions on Project {
   }
 
   // --- Finance ---
-  double get remainingBudget => totalBudget - amountPaid;
-
-  String get paymentStatusText {
-    if (totalBudget == 0) return 'Gratis / Internal';
-    if (remainingBudget <= 0) return 'Lunas';
-    return 'Sisa tagihan: Rp ${remainingBudget.toStringAsFixed(0)}';
-  }
+  // Financial logic moved to ProjectAnalytics extension with new Invoice table support
 
   // --- Tech Icons (JSON Parsing) ---
   List<String> get parsedTechStack {

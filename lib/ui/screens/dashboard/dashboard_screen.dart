@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:collection/collection.dart';
 
 import '../../../domain/models/project.dart' as domain;
 import '../../../domain/models/task.dart' as domain;
@@ -16,6 +15,7 @@ import '../projects/add_edit_project_screen.dart';
 import '../vault/vault_screen.dart';
 import '../../widgets/connectivity_indicator.dart';
 import '../tasks/add_edit_task_bottom_sheet.dart';
+import '../financial/financial_screen.dart';
 import '../../../data/local/app_database.dart'
     show Invoice; // Direct import for now as it's not in domain models
 
@@ -110,6 +110,10 @@ class _DesktopLayout extends ConsumerWidget {
                 label: Text('Tasks'),
               ),
               NavigationRailDestination(
+                icon: Icon(LucideIcons.banknote),
+                label: Text('Financial'),
+              ),
+              NavigationRailDestination(
                 icon: Icon(LucideIcons.shield),
                 label: Text('Vault'),
               ),
@@ -148,6 +152,8 @@ class _DesktopLayout extends ConsumerWidget {
       case 2:
         return const TaskListScreen();
       case 3:
+        return const FinancialScreen();
+      case 4:
         return const VaultScreen();
       default:
         return _DashboardHome();
@@ -221,6 +227,10 @@ class _MobileLayout extends ConsumerWidget {
             icon: Icon(LucideIcons.checkSquare),
             label: 'Tasks',
           ),
+          NavigationDestination(
+            icon: Icon(LucideIcons.banknote),
+            label: 'Finance',
+          ),
           NavigationDestination(icon: Icon(LucideIcons.shield), label: 'Vault'),
         ],
       ),
@@ -237,6 +247,8 @@ class _MobileLayout extends ConsumerWidget {
       case 2:
         return const TaskListScreen();
       case 3:
+        return const FinancialScreen();
+      case 4:
         return const VaultScreen();
       default:
         return _DashboardHome();
@@ -250,6 +262,7 @@ class _DashboardHome extends ConsumerWidget {
     // Watch streams
     final allProjects = ref.watch(projectsStreamProvider);
     final allTasks = ref.watch(allTasksStreamProvider);
+    final allInvoices = ref.watch(allInvoicesStreamProvider); // Watch Invoices
     final isOnlineAsync = ref.watch(connectivityStreamProvider);
     final isOnline = isOnlineAsync.value ?? false;
 
@@ -257,7 +270,20 @@ class _DashboardHome extends ConsumerWidget {
       data: (projects) {
         return allTasks.when(
           data: (tasks) {
-            return _buildDashboardContent(context, projects, tasks, isOnline);
+            return allInvoices.when(
+              data: (invoices) {
+                return _buildDashboardContent(
+                  context,
+                  projects,
+                  tasks,
+                  invoices,
+                  isOnline,
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) =>
+                  Center(child: Text('Error loading invoices: $e')),
+            );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, s) => Center(child: Text('Error loading tasks: $e')),
@@ -272,6 +298,7 @@ class _DashboardHome extends ConsumerWidget {
     BuildContext context,
     List<domain.Project> projects,
     List<domain.Task> tasks,
+    List<Invoice> invoices,
     bool isOnline,
   ) {
     final theme = Theme.of(context);
@@ -302,14 +329,18 @@ class _DashboardHome extends ConsumerWidget {
     // --- 2. Financial Overview Logic ---
     double totalEarned = 0;
     double totalPending = 0;
-    double totalInvoiced = 0;
+    double totalCollected = 0;
+    double outstanding = 0;
 
     for (var p in projects.where((p) => !p.isDeleted)) {
       final pTasks = tasks.where((t) => t.projectId == p.id).toList();
-      final financials = p.getFinancials(pTasks);
+      final pInvoices = invoices.where((i) => i.projectId == p.id).toList();
+      final financials = p.getFinancials(pTasks, invoices: pInvoices);
+
       totalEarned += financials.earned;
       totalPending += financials.pending;
-      totalInvoiced += financials.invoiced;
+      totalCollected += financials.collected;
+      outstanding += financials.outstanding;
     }
 
     // --- 3. Workload Summary Logic ---
@@ -454,37 +485,85 @@ class _DashboardHome extends ConsumerWidget {
           );
         }
 
-        // Financial Card
+        // Financial Card (Cash Flow Overview)
         final financialCard = BentoCard(
-          title: 'Financial Overview',
-          icon: LucideIcons.pieChart,
+          title: 'Cash Flow Overview',
+          icon: LucideIcons.trendingUp,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildFinanceRow(
-                context,
-                'Earned',
-                totalEarned,
-                Colors.green,
-                LucideIcons.checkCircle,
+              Text(
+                'Income vs Budget',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
               ),
               const SizedBox(height: 8),
-              _buildFinanceRow(
-                context,
-                'Pending',
-                totalPending,
-                Colors.orange,
-                LucideIcons.clock,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _formatCurrency(totalCollected),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  Text(
+                    'of ${_formatCurrency(totalEarned + totalPending)}', // Using Total Budget approximation
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
-              const Divider(height: 12),
-              _buildFinanceRow(
-                context,
-                'Invoiced',
-                totalInvoiced,
-                theme.colorScheme.primary,
-                LucideIcons.banknote,
-                isBold: true,
+              LinearProgressIndicator(
+                value: (totalEarned + totalPending) > 0
+                    ? (totalCollected / (totalEarned + totalPending))
+                    : 0,
+                borderRadius: BorderRadius.circular(4),
+                backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      LucideIcons.alertCircle,
+                      size: 16,
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Siap Ditagih',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                      Text(
+                        _formatCurrency(outstanding),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -641,35 +720,6 @@ class _DashboardHome extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildFinanceRow(
-    BuildContext context,
-    String label,
-    double amount,
-    Color color,
-    IconData icon, {
-    bool isBold = false,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 8),
-            Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          ],
-        ),
-        Text(
-          _formatCurrency(amount),
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: isBold ? Theme.of(context).colorScheme.primary : null,
-          ),
-        ),
-      ],
     );
   }
 

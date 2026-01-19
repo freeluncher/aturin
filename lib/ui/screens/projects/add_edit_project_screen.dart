@@ -26,7 +26,6 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
   late TextEditingController _clientNameController;
   late TextEditingController _clientContactController;
   late TextEditingController _budgetController;
-  late TextEditingController _paidController;
   late TextEditingController _techStackController; // Comma separated
 
   DateTime? _selectedDeadline;
@@ -46,9 +45,6 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
     );
     _budgetController = TextEditingController(
       text: p?.totalBudget.toString() ?? '0',
-    );
-    _paidController = TextEditingController(
-      text: p?.amountPaid.toString() ?? '0',
     );
 
     // Convert JSON list to comma separated string for editing
@@ -72,7 +68,6 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
     _clientNameController.dispose();
     _clientContactController.dispose();
     _budgetController.dispose();
-    _paidController.dispose();
     _techStackController.dispose();
     super.dispose();
   }
@@ -89,11 +84,6 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
       final totalBudget =
           double.tryParse(
             _budgetController.text.replaceAll(RegExp(r'[^0-9.]'), ''),
-          ) ??
-          0.0;
-      final amountPaid =
-          double.tryParse(
-            _paidController.text.replaceAll(RegExp(r'[^0-9.]'), ''),
           ) ??
           0.0;
 
@@ -118,7 +108,6 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
           clientName: _clientNameController.text.trim(),
           clientContact: _clientContactController.text.trim(),
           totalBudget: totalBudget,
-          amountPaid: amountPaid,
           techStack: techStackJson,
           status: _status,
         );
@@ -139,7 +128,6 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
           clientName: _clientNameController.text.trim(),
           clientContact: _clientContactController.text.trim(),
           totalBudget: totalBudget,
-          amountPaid: amountPaid,
           techStack: techStackJson,
           status: _status,
         );
@@ -300,17 +288,6 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'Total Budget (Rp)',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    controller: _paidController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Amount Paid (Rp)',
                       border: OutlineInputBorder(),
                     ),
                   ),

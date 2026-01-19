@@ -62,3 +62,9 @@ final connectivityStreamProvider = StreamProvider<bool>((ref) {
     return !results.contains(ConnectivityResult.none);
   });
 });
+
+// Invoices Stream Provider
+final allInvoicesStreamProvider = StreamProvider.autoDispose((ref) {
+  final database = ref.watch(databaseProvider);
+  return database.select(database.invoices).watch();
+});

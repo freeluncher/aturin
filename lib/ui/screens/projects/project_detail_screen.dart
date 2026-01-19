@@ -12,6 +12,9 @@ import '../../widgets/bento_card.dart';
 import '../tasks/add_edit_task_bottom_sheet.dart';
 import 'add_edit_project_screen.dart';
 import '../vault/vault_screen.dart';
+import 'package:uuid/uuid.dart';
+import 'package:drift/drift.dart' hide Column;
+import '../../../data/local/app_database.dart' hide Project, Task;
 
 class ProjectDetailScreen extends ConsumerWidget {
   final Project project;
@@ -311,15 +314,29 @@ class ProjectDetailScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(LucideIcons.dollarSign, color: Colors.green),
-              const SizedBox(width: 8),
-              Text("Finance", style: Theme.of(context).textTheme.labelLarge),
+              Row(
+                children: [
+                  const Icon(LucideIcons.dollarSign, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Finance",
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ],
+              ),
+              IconButton(
+                onPressed: () => _showAddInvoiceDialog(context, project.id),
+                icon: const Icon(LucideIcons.plusCircle, size: 16),
+                tooltip: 'Create Invoice',
+                visualDensity: VisualDensity.compact,
+              ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            project.paymentStatusText,
+            "Financial Overview", // Replaced static text with generic title, as logic now uses Stream
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -352,6 +369,78 @@ class ProjectDetailScreen extends ConsumerWidget {
               ),
             )
             .toList(),
+      ),
+    );
+  }
+
+  void _showAddInvoiceDialog(BuildContext context, String projectId) {
+    final titleController = TextEditingController();
+    final amountController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => Consumer(
+        builder: (context, ref, child) {
+          return AlertDialog(
+            title: const Text('Create Invoice'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Invoice Title',
+                    hintText: 'e.g., Termin 1, Down Payment',
+                  ),
+                  autofocus: true,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: amountController,
+                  decoration: const InputDecoration(
+                    labelText: 'Amount (Rp)',
+                    prefixText: 'Rp ',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final title = titleController.text.trim();
+                  final amountStr = amountController.text.trim();
+                  if (title.isEmpty || amountStr.isEmpty) return;
+
+                  final amount = double.tryParse(amountStr) ?? 0;
+                  final db = ref.read(databaseProvider);
+
+                  // Create new Invoice
+                  await db
+                      .into(db.invoices)
+                      .insert(
+                        InvoicesCompanion.insert(
+                          id: Value(const Uuid().v4()),
+                          projectId: projectId,
+                          title: title,
+                          amount: amount,
+                          status: const Value('Draft'),
+                          dueDate: DateTime.now().add(const Duration(days: 30)),
+                          isSynced: const Value(false),
+                        ),
+                      );
+
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

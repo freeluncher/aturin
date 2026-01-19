@@ -9,7 +9,7 @@ class Project {
   final String? clientName;
   final String? clientContact;
   final double totalBudget;
-  final double amountPaid;
+  // final double amountPaid; // Removed in v7
   final String? techStack;
   final int status;
   final bool isSynced;
@@ -26,7 +26,6 @@ class Project {
     this.clientName,
     this.clientContact,
     this.totalBudget = 0.0,
-    this.amountPaid = 0.0,
     this.techStack,
     this.status = 1, // Default Active
     this.isSynced = false,
@@ -44,7 +43,6 @@ class Project {
     String? clientName,
     String? clientContact,
     double? totalBudget,
-    double? amountPaid,
     String? techStack,
     int? status,
     bool? isSynced,
@@ -61,7 +59,6 @@ class Project {
       clientName: clientName ?? this.clientName,
       clientContact: clientContact ?? this.clientContact,
       totalBudget: totalBudget ?? this.totalBudget,
-      amountPaid: amountPaid ?? this.amountPaid,
       techStack: techStack ?? this.techStack,
       status: status ?? this.status,
       isSynced: isSynced ?? this.isSynced,

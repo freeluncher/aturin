@@ -46,3 +46,24 @@ app.*.map.json
 
 # Environment variables
 .env
+
+# Secrets and sensitive information
+*.keystore
+*.jks
+*.p12
+*.key
+*.pem
+local.properties
+**/*.secret
+**/*.credentials
+google-services.json
+GoogleService-Info.plist
+
+# Windows specific
+/windows/flutter/ephemeral/
+/windows/CMakeLists.txt.user
+.vs/
+
+# Android specific
+.gradle/
+captures/

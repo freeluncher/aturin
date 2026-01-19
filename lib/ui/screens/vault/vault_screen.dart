@@ -6,7 +6,6 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/providers.dart';
 import '../../../data/repositories/vault_repository_impl.dart';
-import '../../../data/services/sync_service.dart';
 import '../../../domain/models/vault_item.dart';
 import '../../widgets/bento_card.dart';
 

@@ -112,13 +112,18 @@ class VaultRepositoryImpl implements VaultRepository {
         .insertOnConflictUpdate(VaultMapper.toCompanion(encryptedItem));
   }
 
-  @override
   Future<void> deleteItem(String id) async {
-    // Soft Delete for sync
+    // Secure Wipe + Soft Delete
+    // We overwrite the data with empty strings so the actual secret is destroyed
+    // but keep the ID and isDeleted flag so functionality like Sync can propagate the deletion.
     await (_db.update(_db.vaultItems)..where((tbl) => tbl.id.equals(id))).write(
       VaultItemsCompanion(
+        key: const Value(''), // Wipe Key
+        value: const Value(''), // Wipe Secret
+        category: const Value(null), // Wipe Category
+        projectId: const Value(null), // Detach Project
         isDeleted: const Value(true),
-        isSynced: const Value(false),
+        isSynced: const Value(false), // Mark unsynced to trigger push
       ),
     );
   }

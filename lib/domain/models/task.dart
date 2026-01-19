@@ -1,18 +1,22 @@
-class Project {
+class Task {
   final String id;
   final String? serverId;
-  final String name;
-  final String description;
+  final String projectId;
+  final String title;
+  final String? description;
+  final bool isCompleted;
   final DateTime createdAt;
   final DateTime lastUpdated;
   final bool isSynced;
   final bool isDeleted;
 
-  Project({
+  Task({
     required this.id,
     this.serverId,
-    required this.name,
-    required this.description,
+    required this.projectId,
+    required this.title,
+    this.description,
+    this.isCompleted = false,
     required this.createdAt,
     required this.lastUpdated,
     this.isSynced = false,

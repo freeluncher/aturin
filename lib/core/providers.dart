@@ -1,0 +1,31 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../domain/repositories/project_repository.dart';
+import '../../data/repositories/project_repository_impl.dart';
+import '../../data/local/app_database.dart';
+import '../data/services/sync_service.dart';
+import 'supabase_config.dart';
+
+// Database Provider
+final databaseProvider = Provider<AppDatabase>((ref) {
+  return AppDatabase();
+});
+
+// Supabase Client Provider
+final supabaseClientProvider = Provider<SupabaseClient>((ref) {
+  return SupabaseConfig.client;
+});
+
+// Project Repository Provider
+final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
+  final db = ref.watch(databaseProvider);
+  final supabase = ref.watch(supabaseClientProvider);
+  return ProjectRepositoryImpl(db, supabase);
+});
+
+// Sync Service Provider
+final syncServiceProvider = Provider<SyncService>((ref) {
+  final db = ref.watch(databaseProvider);
+  final supabase = ref.watch(supabaseClientProvider);
+  return SyncService(db, supabase);
+});

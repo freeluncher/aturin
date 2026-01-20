@@ -26,6 +26,7 @@ class Projects extends Table {
   // Client Info
   TextColumn get clientName => text().nullable()();
   TextColumn get clientContact => text().nullable()();
+  TextColumn get clientEmail => text().nullable()();
 
   // Financial Info
   RealColumn get totalBudget => real().withDefault(const Constant(0.0))();
@@ -129,7 +130,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -181,6 +182,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 8) {
           await m.addColumn(tasks, tasks.priority);
           await m.addColumn(tasks, tasks.dueDate);
+        }
+        if (from < 9) {
+          await m.addColumn(projects, projects.clientEmail);
         }
       },
     );

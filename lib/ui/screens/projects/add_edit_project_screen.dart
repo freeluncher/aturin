@@ -26,7 +26,8 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
 
   // Phase 1 Fields
   late TextEditingController _clientNameController;
-  late TextEditingController _clientContactController;
+  late TextEditingController _clientContactController; // Now Phone
+  late TextEditingController _clientEmailController; // New Email
   late TextEditingController _budgetController;
   late TextEditingController _techStackController; // Comma separated
 
@@ -93,6 +94,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
     _clientContactController = TextEditingController(
       text: p?.clientContact ?? '',
     );
+    _clientEmailController = TextEditingController(text: p?.clientEmail ?? '');
     _budgetController = TextEditingController(
       text: p?.totalBudget.toString() ?? '0',
     );
@@ -117,6 +119,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
     _descController.dispose();
     _clientNameController.dispose();
     _clientContactController.dispose();
+    _clientEmailController.dispose();
     _budgetController.dispose();
     _techStackController.dispose();
     super.dispose();
@@ -158,6 +161,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
           // New Fields
           clientName: _clientNameController.text.trim(),
           clientContact: _clientContactController.text.trim(),
+          clientEmail: _clientEmailController.text.trim(),
           totalBudget: totalBudget,
           techStack: techStackJson,
           status: _status,
@@ -200,6 +204,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
           // New Fields
           clientName: _clientNameController.text.trim(),
           clientContact: _clientContactController.text.trim(),
+          clientEmail: _clientEmailController.text.trim(),
           totalBudget: totalBudget,
           techStack: techStackJson,
           status: _status,
@@ -340,31 +345,73 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Client Info
-            Text('Info Klien', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
+            // Client Info Section
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        LucideIcons.user,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Info Klien',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
                     controller: _clientNameController,
                     decoration: const InputDecoration(
                       labelText: 'Nama Klien/Dosen',
+                      prefixIcon: Icon(LucideIcons.userCircle),
                       border: OutlineInputBorder(),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    controller: _clientContactController,
-                    decoration: const InputDecoration(
-                      labelText: 'Kontak (HP/Email)',
-                      border: OutlineInputBorder(),
-                    ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _clientContactController,
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(
+                            labelText: 'No. HP / WhatsApp',
+                            prefixIcon: Icon(LucideIcons.phone),
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _clientEmailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: Icon(LucideIcons.mail),
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 24),
 

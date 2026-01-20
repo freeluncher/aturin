@@ -106,6 +106,17 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _clientEmailMeta = const VerificationMeta(
+    'clientEmail',
+  );
+  @override
+  late final GeneratedColumn<String> clientEmail = GeneratedColumn<String>(
+    'client_email',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _totalBudgetMeta = const VerificationMeta(
     'totalBudget',
   );
@@ -180,6 +191,7 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     deadline,
     clientName,
     clientContact,
+    clientEmail,
     totalBudget,
     techStack,
     status,
@@ -262,6 +274,15 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         ),
       );
     }
+    if (data.containsKey('client_email')) {
+      context.handle(
+        _clientEmailMeta,
+        clientEmail.isAcceptableOrUnknown(
+          data['client_email']!,
+          _clientEmailMeta,
+        ),
+      );
+    }
     if (data.containsKey('total_budget')) {
       context.handle(
         _totalBudgetMeta,
@@ -340,6 +361,10 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         DriftSqlType.string,
         data['${effectivePrefix}client_contact'],
       ),
+      clientEmail: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_email'],
+      ),
       totalBudget: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}total_budget'],
@@ -379,6 +404,7 @@ class Project extends DataClass implements Insertable<Project> {
   final DateTime? deadline;
   final String? clientName;
   final String? clientContact;
+  final String? clientEmail;
   final double totalBudget;
   final String? techStack;
   final int status;
@@ -394,6 +420,7 @@ class Project extends DataClass implements Insertable<Project> {
     this.deadline,
     this.clientName,
     this.clientContact,
+    this.clientEmail,
     required this.totalBudget,
     this.techStack,
     required this.status,
@@ -419,6 +446,9 @@ class Project extends DataClass implements Insertable<Project> {
     }
     if (!nullToAbsent || clientContact != null) {
       map['client_contact'] = Variable<String>(clientContact);
+    }
+    if (!nullToAbsent || clientEmail != null) {
+      map['client_email'] = Variable<String>(clientEmail);
     }
     map['total_budget'] = Variable<double>(totalBudget);
     if (!nullToAbsent || techStack != null) {
@@ -449,6 +479,9 @@ class Project extends DataClass implements Insertable<Project> {
       clientContact: clientContact == null && nullToAbsent
           ? const Value.absent()
           : Value(clientContact),
+      clientEmail: clientEmail == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientEmail),
       totalBudget: Value(totalBudget),
       techStack: techStack == null && nullToAbsent
           ? const Value.absent()
@@ -474,6 +507,7 @@ class Project extends DataClass implements Insertable<Project> {
       deadline: serializer.fromJson<DateTime?>(json['deadline']),
       clientName: serializer.fromJson<String?>(json['clientName']),
       clientContact: serializer.fromJson<String?>(json['clientContact']),
+      clientEmail: serializer.fromJson<String?>(json['clientEmail']),
       totalBudget: serializer.fromJson<double>(json['totalBudget']),
       techStack: serializer.fromJson<String?>(json['techStack']),
       status: serializer.fromJson<int>(json['status']),
@@ -494,6 +528,7 @@ class Project extends DataClass implements Insertable<Project> {
       'deadline': serializer.toJson<DateTime?>(deadline),
       'clientName': serializer.toJson<String?>(clientName),
       'clientContact': serializer.toJson<String?>(clientContact),
+      'clientEmail': serializer.toJson<String?>(clientEmail),
       'totalBudget': serializer.toJson<double>(totalBudget),
       'techStack': serializer.toJson<String?>(techStack),
       'status': serializer.toJson<int>(status),
@@ -512,6 +547,7 @@ class Project extends DataClass implements Insertable<Project> {
     Value<DateTime?> deadline = const Value.absent(),
     Value<String?> clientName = const Value.absent(),
     Value<String?> clientContact = const Value.absent(),
+    Value<String?> clientEmail = const Value.absent(),
     double? totalBudget,
     Value<String?> techStack = const Value.absent(),
     int? status,
@@ -529,6 +565,7 @@ class Project extends DataClass implements Insertable<Project> {
     clientContact: clientContact.present
         ? clientContact.value
         : this.clientContact,
+    clientEmail: clientEmail.present ? clientEmail.value : this.clientEmail,
     totalBudget: totalBudget ?? this.totalBudget,
     techStack: techStack.present ? techStack.value : this.techStack,
     status: status ?? this.status,
@@ -554,6 +591,9 @@ class Project extends DataClass implements Insertable<Project> {
       clientContact: data.clientContact.present
           ? data.clientContact.value
           : this.clientContact,
+      clientEmail: data.clientEmail.present
+          ? data.clientEmail.value
+          : this.clientEmail,
       totalBudget: data.totalBudget.present
           ? data.totalBudget.value
           : this.totalBudget,
@@ -576,6 +616,7 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('deadline: $deadline, ')
           ..write('clientName: $clientName, ')
           ..write('clientContact: $clientContact, ')
+          ..write('clientEmail: $clientEmail, ')
           ..write('totalBudget: $totalBudget, ')
           ..write('techStack: $techStack, ')
           ..write('status: $status, ')
@@ -596,6 +637,7 @@ class Project extends DataClass implements Insertable<Project> {
     deadline,
     clientName,
     clientContact,
+    clientEmail,
     totalBudget,
     techStack,
     status,
@@ -615,6 +657,7 @@ class Project extends DataClass implements Insertable<Project> {
           other.deadline == this.deadline &&
           other.clientName == this.clientName &&
           other.clientContact == this.clientContact &&
+          other.clientEmail == this.clientEmail &&
           other.totalBudget == this.totalBudget &&
           other.techStack == this.techStack &&
           other.status == this.status &&
@@ -632,6 +675,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<DateTime?> deadline;
   final Value<String?> clientName;
   final Value<String?> clientContact;
+  final Value<String?> clientEmail;
   final Value<double> totalBudget;
   final Value<String?> techStack;
   final Value<int> status;
@@ -648,6 +692,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.deadline = const Value.absent(),
     this.clientName = const Value.absent(),
     this.clientContact = const Value.absent(),
+    this.clientEmail = const Value.absent(),
     this.totalBudget = const Value.absent(),
     this.techStack = const Value.absent(),
     this.status = const Value.absent(),
@@ -665,6 +710,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.deadline = const Value.absent(),
     this.clientName = const Value.absent(),
     this.clientContact = const Value.absent(),
+    this.clientEmail = const Value.absent(),
     this.totalBudget = const Value.absent(),
     this.techStack = const Value.absent(),
     this.status = const Value.absent(),
@@ -683,6 +729,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Expression<DateTime>? deadline,
     Expression<String>? clientName,
     Expression<String>? clientContact,
+    Expression<String>? clientEmail,
     Expression<double>? totalBudget,
     Expression<String>? techStack,
     Expression<int>? status,
@@ -700,6 +747,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       if (deadline != null) 'deadline': deadline,
       if (clientName != null) 'client_name': clientName,
       if (clientContact != null) 'client_contact': clientContact,
+      if (clientEmail != null) 'client_email': clientEmail,
       if (totalBudget != null) 'total_budget': totalBudget,
       if (techStack != null) 'tech_stack': techStack,
       if (status != null) 'status': status,
@@ -719,6 +767,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Value<DateTime?>? deadline,
     Value<String?>? clientName,
     Value<String?>? clientContact,
+    Value<String?>? clientEmail,
     Value<double>? totalBudget,
     Value<String?>? techStack,
     Value<int>? status,
@@ -736,6 +785,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       deadline: deadline ?? this.deadline,
       clientName: clientName ?? this.clientName,
       clientContact: clientContact ?? this.clientContact,
+      clientEmail: clientEmail ?? this.clientEmail,
       totalBudget: totalBudget ?? this.totalBudget,
       techStack: techStack ?? this.techStack,
       status: status ?? this.status,
@@ -775,6 +825,9 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (clientContact.present) {
       map['client_contact'] = Variable<String>(clientContact.value);
     }
+    if (clientEmail.present) {
+      map['client_email'] = Variable<String>(clientEmail.value);
+    }
     if (totalBudget.present) {
       map['total_budget'] = Variable<double>(totalBudget.value);
     }
@@ -808,6 +861,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('deadline: $deadline, ')
           ..write('clientName: $clientName, ')
           ..write('clientContact: $clientContact, ')
+          ..write('clientEmail: $clientEmail, ')
           ..write('totalBudget: $totalBudget, ')
           ..write('techStack: $techStack, ')
           ..write('status: $status, ')
@@ -2802,6 +2856,7 @@ typedef $$ProjectsTableCreateCompanionBuilder =
       Value<DateTime?> deadline,
       Value<String?> clientName,
       Value<String?> clientContact,
+      Value<String?> clientEmail,
       Value<double> totalBudget,
       Value<String?> techStack,
       Value<int> status,
@@ -2820,6 +2875,7 @@ typedef $$ProjectsTableUpdateCompanionBuilder =
       Value<DateTime?> deadline,
       Value<String?> clientName,
       Value<String?> clientContact,
+      Value<String?> clientEmail,
       Value<double> totalBudget,
       Value<String?> techStack,
       Value<int> status,
@@ -2940,6 +2996,11 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<String> get clientContact => $composableBuilder(
     column: $table.clientContact,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clientEmail => $composableBuilder(
+    column: $table.clientEmail,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3098,6 +3159,11 @@ class $$ProjectsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get clientEmail => $composableBuilder(
+    column: $table.clientEmail,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get totalBudget => $composableBuilder(
     column: $table.totalBudget,
     builder: (column) => ColumnOrderings(column),
@@ -3165,6 +3231,11 @@ class $$ProjectsTableAnnotationComposer
 
   GeneratedColumn<String> get clientContact => $composableBuilder(
     column: $table.clientContact,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get clientEmail => $composableBuilder(
+    column: $table.clientEmail,
     builder: (column) => column,
   );
 
@@ -3302,6 +3373,7 @@ class $$ProjectsTableTableManager
                 Value<DateTime?> deadline = const Value.absent(),
                 Value<String?> clientName = const Value.absent(),
                 Value<String?> clientContact = const Value.absent(),
+                Value<String?> clientEmail = const Value.absent(),
                 Value<double> totalBudget = const Value.absent(),
                 Value<String?> techStack = const Value.absent(),
                 Value<int> status = const Value.absent(),
@@ -3318,6 +3390,7 @@ class $$ProjectsTableTableManager
                 deadline: deadline,
                 clientName: clientName,
                 clientContact: clientContact,
+                clientEmail: clientEmail,
                 totalBudget: totalBudget,
                 techStack: techStack,
                 status: status,
@@ -3336,6 +3409,7 @@ class $$ProjectsTableTableManager
                 Value<DateTime?> deadline = const Value.absent(),
                 Value<String?> clientName = const Value.absent(),
                 Value<String?> clientContact = const Value.absent(),
+                Value<String?> clientEmail = const Value.absent(),
                 Value<double> totalBudget = const Value.absent(),
                 Value<String?> techStack = const Value.absent(),
                 Value<int> status = const Value.absent(),
@@ -3352,6 +3426,7 @@ class $$ProjectsTableTableManager
                 deadline: deadline,
                 clientName: clientName,
                 clientContact: clientContact,
+                clientEmail: clientEmail,
                 totalBudget: totalBudget,
                 techStack: techStack,
                 status: status,

@@ -46,6 +46,12 @@ class ProjectRepositoryImpl implements ProjectRepository {
           'user_id': _supabase.auth.currentUser?.id,
           'name': project.name,
           'description': project.description,
+          'client_name': project.clientName,
+          'client_contact': project.clientContact, // Phone
+          'client_email': project.clientEmail, // Email
+          'total_budget': project.totalBudget,
+          'tech_stack': project.techStack,
+          'status': project.status,
           'created_at': project.createdAt.toIso8601String(),
           'last_updated': project.lastUpdated.toIso8601String(),
           'deadline': project.deadline?.toIso8601String(),
@@ -79,6 +85,12 @@ class ProjectRepositoryImpl implements ProjectRepository {
             .update({
               'name': project.name,
               'description': project.description,
+              'client_name': project.clientName,
+              'client_contact': project.clientContact,
+              'client_email': project.clientEmail,
+              'total_budget': project.totalBudget,
+              'tech_stack': project.techStack,
+              'status': project.status,
               'last_updated': DateTime.now().toIso8601String(),
               'deadline': project.deadline?.toIso8601String(),
               'is_deleted': project.isDeleted,
@@ -242,6 +254,14 @@ class ProjectRepositoryImpl implements ProjectRepository {
                   serverId: Value(id),
                   name: data['name'] as String,
                   description: data['description'] as String,
+                  clientName: Value(data['client_name'] as String?),
+                  clientContact: Value(data['client_contact'] as String?),
+                  clientEmail: Value(data['client_email'] as String?),
+                  totalBudget: Value(
+                    (data['total_budget'] as num?)?.toDouble() ?? 0.0,
+                  ),
+                  techStack: Value(data['tech_stack'] as String?),
+                  status: Value(data['status'] as int? ?? 1),
                   createdAt: Value(
                     DateTime.parse(data['created_at'] as String),
                   ),
@@ -264,6 +284,14 @@ class ProjectRepositoryImpl implements ProjectRepository {
               ProjectsCompanion(
                 name: Value(data['name'] as String),
                 description: Value(data['description'] as String),
+                clientName: Value(data['client_name'] as String?),
+                clientContact: Value(data['client_contact'] as String?),
+                clientEmail: Value(data['client_email'] as String?),
+                totalBudget: Value(
+                  (data['total_budget'] as num?)?.toDouble() ?? 0.0,
+                ),
+                techStack: Value(data['tech_stack'] as String?),
+                status: Value(data['status'] as int? ?? 1),
                 lastUpdated: Value(serverUpdatedAt),
                 deadline: Value(
                   data['deadline'] != null

@@ -76,3 +76,11 @@ final allInvoicesStreamProvider =
     StreamProvider.autoDispose<List<domain.Invoice>>((ref) {
       return ref.watch(invoiceRepositoryProvider).getAllInvoices();
     });
+
+// Project Invoices Stream Provider
+final projectInvoicesStreamProvider = StreamProvider.autoDispose
+    .family<List<domain.Invoice>, String>((ref, projectId) {
+      return ref
+          .watch(invoiceRepositoryProvider)
+          .getInvoicesByProject(projectId);
+    });

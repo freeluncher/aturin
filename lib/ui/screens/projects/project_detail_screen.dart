@@ -10,11 +10,11 @@ import '../../../domain/models/task.dart';
 import '../../../domain/extensions/project_extensions.dart'; // Import extension
 import '../../widgets/bento_card.dart';
 import '../tasks/add_edit_task_bottom_sheet.dart';
+import '../financial/add_edit_invoice_sheet.dart';
+import 'project_invoices_screen.dart'; // Moved here
 import 'add_edit_project_screen.dart';
 import '../vault/vault_screen.dart';
-import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' hide Column;
-import '../../../data/local/app_database.dart' hide Project, Task;
+// Unused imports removed
 
 class ProjectDetailScreen extends ConsumerWidget {
   final Project project;
@@ -308,44 +308,57 @@ class ProjectDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildFinanceCard(BuildContext context, Project project) {
-    return BentoCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(LucideIcons.dollarSign, color: Colors.green),
-                  const SizedBox(width: 8),
-                  Text(
-                    "Finance",
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                ],
-              ),
-              IconButton(
-                onPressed: () => _showAddInvoiceDialog(context, project.id),
-                icon: const Icon(LucideIcons.plusCircle, size: 16),
-                tooltip: 'Create Invoice',
-                visualDensity: VisualDensity.compact,
-              ),
-            ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProjectInvoicesScreen(
+              projectId: project.id,
+              projectName: project.name,
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            "Financial Overview", // Replaced static text with generic title, as logic now uses Stream
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          Text(
-            "Budget: Rp ${project.totalBudget.toStringAsFixed(0)}",
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
+        );
+      },
+      child: BentoCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(LucideIcons.dollarSign, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Finance",
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ],
+                ),
+                IconButton(
+                  onPressed: () => _showAddInvoiceDialog(context, project.id),
+                  icon: const Icon(LucideIcons.plusCircle, size: 16),
+                  tooltip: 'Create Invoice',
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Financial Overview", // Replaced static text with generic title, as logic now uses Stream
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            Text(
+              "Budget: Rp ${project.totalBudget.toStringAsFixed(0)}",
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -374,74 +387,11 @@ class ProjectDetailScreen extends ConsumerWidget {
   }
 
   void _showAddInvoiceDialog(BuildContext context, String projectId) {
-    final titleController = TextEditingController();
-    final amountController = TextEditingController();
-
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => Consumer(
-        builder: (context, ref, child) {
-          return AlertDialog(
-            title: const Text('Create Invoice'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Invoice Title',
-                    hintText: 'e.g., Termin 1, Down Payment',
-                  ),
-                  autofocus: true,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: amountController,
-                  decoration: const InputDecoration(
-                    labelText: 'Amount (Rp)',
-                    prefixText: 'Rp ',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  final title = titleController.text.trim();
-                  final amountStr = amountController.text.trim();
-                  if (title.isEmpty || amountStr.isEmpty) return;
-
-                  final amount = double.tryParse(amountStr) ?? 0;
-                  final db = ref.read(databaseProvider);
-
-                  // Create new Invoice
-                  await db
-                      .into(db.invoices)
-                      .insert(
-                        InvoicesCompanion.insert(
-                          id: Value(const Uuid().v4()),
-                          projectId: projectId,
-                          title: title,
-                          amount: amount,
-                          status: const Value('Draft'),
-                          dueDate: DateTime.now().add(const Duration(days: 30)),
-                          isSynced: const Value(false),
-                        ),
-                      );
-
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          );
-        },
-      ),
+      isScrollControlled: true,
+      builder: (context) =>
+          AddEditInvoiceSheet(preselectedProjectId: projectId),
     );
   }
 
@@ -512,6 +462,27 @@ class _SidePanel extends StatelessWidget {
           ],
 
           Text("Actions", style: Theme.of(context).textTheme.labelLarge),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(LucideIcons.fileText),
+            title: const Text("Invoices"),
+            subtitle: const Text("View & Manage"),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            tileColor: Theme.of(context).colorScheme.surface,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProjectInvoicesScreen(
+                    projectId: project.id,
+                    projectName: project.name,
+                  ),
+                ),
+              );
+            },
+          ),
           const SizedBox(height: 8),
           ListTile(
             leading: const Icon(LucideIcons.shield),

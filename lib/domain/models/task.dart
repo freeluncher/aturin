@@ -7,6 +7,8 @@ class Task {
   final bool isCompleted;
   final DateTime createdAt;
   final DateTime lastUpdated;
+  final int priority; // 0: Low, 1: Med, 2: High
+  final DateTime? dueDate;
   final bool isSynced;
   final bool isDeleted;
 
@@ -19,6 +21,8 @@ class Task {
     this.isCompleted = false,
     required this.createdAt,
     required this.lastUpdated,
+    this.priority = 1,
+    this.dueDate,
     this.isSynced = false,
     this.isDeleted = false,
   });
@@ -32,6 +36,8 @@ class Task {
     bool? isCompleted,
     DateTime? createdAt,
     DateTime? lastUpdated,
+    int? priority,
+    DateTime? dueDate,
     bool? isSynced,
     bool? isDeleted,
   }) {
@@ -44,6 +50,8 @@ class Task {
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      priority: priority ?? this.priority,
+      dueDate: dueDate ?? this.dueDate,
       isSynced: isSynced ?? this.isSynced,
       isDeleted: isDeleted ?? this.isDeleted,
     );

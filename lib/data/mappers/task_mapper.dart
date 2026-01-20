@@ -13,6 +13,8 @@ extension TaskMapper on Task {
       isCompleted: isCompleted,
       createdAt: createdAt,
       lastUpdated: lastUpdated,
+      priority: priority,
+      dueDate: dueDate,
       isSynced: isSynced,
       isDeleted: isDeleted,
     );
@@ -29,7 +31,10 @@ extension DomainTaskMapper on domain.Task {
       description: Value(description),
       isCompleted: Value(isCompleted),
       createdAt: Value(createdAt),
+
       lastUpdated: Value(lastUpdated),
+      priority: Value(priority),
+      dueDate: Value(dueDate),
       isSynced: Value(isSynced),
       isDeleted: Value(isDeleted),
     );

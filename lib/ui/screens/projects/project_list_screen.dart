@@ -45,99 +45,102 @@ class _ProjectListScreenState extends ConsumerState<ProjectListScreen> {
           ),
         ],
       ),
-      body: StreamBuilder<List<Project>>(
-        stream: projectsStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          var projects = snapshot.data ?? [];
-
-          // 1. Filter by Status (Memory)
-          if (_statusFilter != null) {
-            projects = projects
-                .where((p) => p.status == _statusFilter)
-                .toList();
-          }
-
-          // 2. Filter by Search Query (Memory)
-          if (_searchQuery.isNotEmpty) {
-            final query = _searchQuery.toLowerCase();
-            projects = projects.where((p) {
-              return p.name.toLowerCase().contains(query) ||
-                  p.description.toLowerCase().contains(query) ||
-                  (p.clientName?.toLowerCase().contains(query) ?? false);
-            }).toList();
-          }
-
-          return Column(
-            children: [
-              // Search & Filter Header
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppSearchBar(
-                      hintText: 'Search projects, clients...',
-                      onChanged: (val) {
-                        setState(() {
-                          _searchQuery = val;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    FilterChips<int>(
-                      selectedValue: _statusFilter,
-                      onSelected: (val) {
-                        setState(() {
-                          _statusFilter = val;
-                        });
-                      },
-                      options: const {
-                        0: 'Planning',
-                        1: 'Active',
-                        2: 'Testing',
-                        3: 'Completed',
-                      },
-                    ),
-                  ],
+      body: Column(
+        children: [
+          // Search & Filter Header (Stable, outside StreamBuilder)
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppSearchBar(
+                  hintText: 'Search projects, clients...',
+                  initialValue: _searchQuery,
+                  onChanged: (val) {
+                    setState(() {
+                      _searchQuery = val;
+                    });
+                  },
                 ),
-              ),
-              const Divider(height: 1),
+                const SizedBox(height: 12),
+                FilterChips<int>(
+                  selectedValue: _statusFilter,
+                  onSelected: (val) {
+                    setState(() {
+                      _statusFilter = val;
+                    });
+                  },
+                  options: const {
+                    0: 'Planning',
+                    1: 'Active',
+                    2: 'Testing',
+                    3: 'Completed',
+                  },
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
 
-              // Project List
-              Expanded(
-                child: projects.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              LucideIcons.folderOpen,
-                              size: 48,
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No projects found',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ],
+          // Project List (Reactive)
+          Expanded(
+            child: StreamBuilder<List<Project>>(
+              stream: projectsStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                var projects = snapshot.data ?? [];
+
+                // 1. Filter by Status (Memory)
+                if (_statusFilter != null) {
+                  projects = projects
+                      .where((p) => p.status == _statusFilter)
+                      .toList();
+                }
+
+                // 2. Filter by Search Query (Memory)
+                if (_searchQuery.isNotEmpty) {
+                  final query = _searchQuery.toLowerCase();
+                  projects = projects.where((p) {
+                    return p.name.toLowerCase().contains(query) ||
+                        p.description.toLowerCase().contains(query) ||
+                        (p.clientName?.toLowerCase().contains(query) ?? false);
+                  }).toList();
+                }
+
+                if (projects.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          LucideIcons.folderOpen,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.outline,
                         ),
-                      )
-                    : _isGrouped
+                        const SizedBox(height: 16),
+                        Text(
+                          'No projects found',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return _isGrouped
                     ? _buildGroupedList(context, projects)
-                    : _buildFlatList(projects),
-              ),
-            ],
-          );
-        },
+                    : _buildFlatList(projects);
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'project_list_fab',

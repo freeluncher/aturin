@@ -57,6 +57,11 @@ class Tasks extends Table {
   DateTimeColumn get lastUpdated =>
       dateTime().withDefault(currentDateAndTime)();
 
+  // New Columns (Phase 2 - Priority & Due Date)
+  IntColumn get priority =>
+      integer().withDefault(const Constant(1))(); // 0: Low, 1: Medium, 2: High
+  DateTimeColumn get dueDate => dateTime().nullable()();
+
   // Sync flags
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
@@ -124,7 +129,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration {
@@ -172,6 +177,10 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 7) {
           await m.createTable(invoices);
+        }
+        if (from < 8) {
+          await m.addColumn(tasks, tasks.priority);
+          await m.addColumn(tasks, tasks.dueDate);
         }
       },
     );

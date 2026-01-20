@@ -6,12 +6,14 @@ class AppSearchBar extends StatefulWidget {
   final String hintText;
   final ValueChanged<String> onChanged;
   final Duration debounceDuration;
+  final String? initialValue;
 
   const AppSearchBar({
     super.key,
     this.hintText = 'Search...',
     required this.onChanged,
     this.debounceDuration = const Duration(milliseconds: 300),
+    this.initialValue,
   });
 
   @override
@@ -19,8 +21,14 @@ class AppSearchBar extends StatefulWidget {
 }
 
 class _AppSearchBarState extends State<AppSearchBar> {
-  final TextEditingController _controller = TextEditingController();
+  late final TextEditingController _controller;
   Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
 
   @override
   void dispose() {

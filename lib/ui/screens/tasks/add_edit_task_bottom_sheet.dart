@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/providers.dart';
 import '../../../domain/models/task.dart';
@@ -21,6 +22,8 @@ class _AddEditTaskBottomSheetState
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _descController;
+  int _priority = 1; // 1: Medium
+  DateTime? _selectedDueDate;
   bool _isLoading = false;
 
   @override
@@ -30,6 +33,8 @@ class _AddEditTaskBottomSheetState
     _descController = TextEditingController(
       text: widget.task?.description ?? '',
     );
+    _priority = widget.task?.priority ?? 1;
+    _selectedDueDate = widget.task?.dueDate;
   }
 
   @override
@@ -57,6 +62,8 @@ class _AddEditTaskBottomSheetState
               : _descController.text.trim(),
           createdAt: now,
           lastUpdated: now,
+          priority: _priority,
+          dueDate: _selectedDueDate,
         );
         await ref.read(projectRepositoryProvider).createTask(newTask);
       } else {
@@ -72,6 +79,8 @@ class _AddEditTaskBottomSheetState
           lastUpdated: now,
           isCompleted: widget.task!.isCompleted,
           serverId: widget.task!.serverId,
+          priority: _priority,
+          dueDate: _selectedDueDate,
           isSynced: false,
           isDeleted: widget.task!.isDeleted,
         );
@@ -124,6 +133,113 @@ class _AddEditTaskBottomSheetState
                 labelText: 'Description (Optional)',
               ),
               maxLines: 2,
+            ),
+            const SizedBox(height: 16),
+            // Priority & Due Date Row
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Priority',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<int>(
+                        segments: const [
+                          ButtonSegment(
+                            value: 0,
+                            label: Text('Low'),
+                            icon: Icon(LucideIcons.arrowDown),
+                          ),
+                          ButtonSegment(
+                            value: 1,
+                            label: Text('Med'),
+                            icon: Icon(LucideIcons.minus),
+                          ),
+                          ButtonSegment(
+                            value: 2,
+                            label: Text('High'),
+                            icon: Icon(LucideIcons.arrowUp),
+                          ),
+                        ],
+                        selected: {_priority},
+                        onSelectionChanged: (Set<int> newSelection) {
+                          setState(() {
+                            _priority = newSelection.first;
+                          });
+                        },
+                        style: ButtonStyle(
+                          visualDensity: VisualDensity.compact,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          padding: WidgetStateProperty.all(EdgeInsets.zero),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Due Date',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _selectedDueDate ?? DateTime.now(),
+                            firstDate: DateTime.now().subtract(
+                              const Duration(days: 365),
+                            ),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365 * 5),
+                            ),
+                          );
+                          if (picked != null) {
+                            setState(() => _selectedDueDate = picked);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                LucideIcons.calendar,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _selectedDueDate != null
+                                    ? '${_selectedDueDate!.day}/${_selectedDueDate!.month}/${_selectedDueDate!.year}'
+                                    : 'No Deadline',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             FilledButton(

@@ -918,6 +918,29 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _priorityMeta = const VerificationMeta(
+    'priority',
+  );
+  @override
+  late final GeneratedColumn<int> priority = GeneratedColumn<int>(
+    'priority',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _dueDateMeta = const VerificationMeta(
+    'dueDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> dueDate = GeneratedColumn<DateTime>(
+    'due_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _isSyncedMeta = const VerificationMeta(
     'isSynced',
   );
@@ -958,6 +981,8 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     isCompleted,
     createdAt,
     lastUpdated,
+    priority,
+    dueDate,
     isSynced,
     isDeleted,
   ];
@@ -1031,6 +1056,18 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         ),
       );
     }
+    if (data.containsKey('priority')) {
+      context.handle(
+        _priorityMeta,
+        priority.isAcceptableOrUnknown(data['priority']!, _priorityMeta),
+      );
+    }
+    if (data.containsKey('due_date')) {
+      context.handle(
+        _dueDateMeta,
+        dueDate.isAcceptableOrUnknown(data['due_date']!, _dueDateMeta),
+      );
+    }
     if (data.containsKey('is_synced')) {
       context.handle(
         _isSyncedMeta,
@@ -1084,6 +1121,14 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_updated'],
       )!,
+      priority: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}priority'],
+      )!,
+      dueDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}due_date'],
+      ),
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
@@ -1110,6 +1155,8 @@ class Task extends DataClass implements Insertable<Task> {
   final bool isCompleted;
   final DateTime createdAt;
   final DateTime lastUpdated;
+  final int priority;
+  final DateTime? dueDate;
   final bool isSynced;
   final bool isDeleted;
   const Task({
@@ -1121,6 +1168,8 @@ class Task extends DataClass implements Insertable<Task> {
     required this.isCompleted,
     required this.createdAt,
     required this.lastUpdated,
+    required this.priority,
+    this.dueDate,
     required this.isSynced,
     required this.isDeleted,
   });
@@ -1139,6 +1188,10 @@ class Task extends DataClass implements Insertable<Task> {
     map['is_completed'] = Variable<bool>(isCompleted);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['last_updated'] = Variable<DateTime>(lastUpdated);
+    map['priority'] = Variable<int>(priority);
+    if (!nullToAbsent || dueDate != null) {
+      map['due_date'] = Variable<DateTime>(dueDate);
+    }
     map['is_synced'] = Variable<bool>(isSynced);
     map['is_deleted'] = Variable<bool>(isDeleted);
     return map;
@@ -1158,6 +1211,10 @@ class Task extends DataClass implements Insertable<Task> {
       isCompleted: Value(isCompleted),
       createdAt: Value(createdAt),
       lastUpdated: Value(lastUpdated),
+      priority: Value(priority),
+      dueDate: dueDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dueDate),
       isSynced: Value(isSynced),
       isDeleted: Value(isDeleted),
     );
@@ -1177,6 +1234,8 @@ class Task extends DataClass implements Insertable<Task> {
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       lastUpdated: serializer.fromJson<DateTime>(json['lastUpdated']),
+      priority: serializer.fromJson<int>(json['priority']),
+      dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
     );
@@ -1193,6 +1252,8 @@ class Task extends DataClass implements Insertable<Task> {
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'lastUpdated': serializer.toJson<DateTime>(lastUpdated),
+      'priority': serializer.toJson<int>(priority),
+      'dueDate': serializer.toJson<DateTime?>(dueDate),
       'isSynced': serializer.toJson<bool>(isSynced),
       'isDeleted': serializer.toJson<bool>(isDeleted),
     };
@@ -1207,6 +1268,8 @@ class Task extends DataClass implements Insertable<Task> {
     bool? isCompleted,
     DateTime? createdAt,
     DateTime? lastUpdated,
+    int? priority,
+    Value<DateTime?> dueDate = const Value.absent(),
     bool? isSynced,
     bool? isDeleted,
   }) => Task(
@@ -1218,6 +1281,8 @@ class Task extends DataClass implements Insertable<Task> {
     isCompleted: isCompleted ?? this.isCompleted,
     createdAt: createdAt ?? this.createdAt,
     lastUpdated: lastUpdated ?? this.lastUpdated,
+    priority: priority ?? this.priority,
+    dueDate: dueDate.present ? dueDate.value : this.dueDate,
     isSynced: isSynced ?? this.isSynced,
     isDeleted: isDeleted ?? this.isDeleted,
   );
@@ -1237,6 +1302,8 @@ class Task extends DataClass implements Insertable<Task> {
       lastUpdated: data.lastUpdated.present
           ? data.lastUpdated.value
           : this.lastUpdated,
+      priority: data.priority.present ? data.priority.value : this.priority,
+      dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
       isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
     );
@@ -1253,6 +1320,8 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('isCompleted: $isCompleted, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastUpdated: $lastUpdated, ')
+          ..write('priority: $priority, ')
+          ..write('dueDate: $dueDate, ')
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted')
           ..write(')'))
@@ -1269,6 +1338,8 @@ class Task extends DataClass implements Insertable<Task> {
     isCompleted,
     createdAt,
     lastUpdated,
+    priority,
+    dueDate,
     isSynced,
     isDeleted,
   );
@@ -1284,6 +1355,8 @@ class Task extends DataClass implements Insertable<Task> {
           other.isCompleted == this.isCompleted &&
           other.createdAt == this.createdAt &&
           other.lastUpdated == this.lastUpdated &&
+          other.priority == this.priority &&
+          other.dueDate == this.dueDate &&
           other.isSynced == this.isSynced &&
           other.isDeleted == this.isDeleted);
 }
@@ -1297,6 +1370,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<bool> isCompleted;
   final Value<DateTime> createdAt;
   final Value<DateTime> lastUpdated;
+  final Value<int> priority;
+  final Value<DateTime?> dueDate;
   final Value<bool> isSynced;
   final Value<bool> isDeleted;
   final Value<int> rowid;
@@ -1309,6 +1384,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.isCompleted = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastUpdated = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.dueDate = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1322,6 +1399,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.isCompleted = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastUpdated = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.dueDate = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1336,6 +1415,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<bool>? isCompleted,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? lastUpdated,
+    Expression<int>? priority,
+    Expression<DateTime>? dueDate,
     Expression<bool>? isSynced,
     Expression<bool>? isDeleted,
     Expression<int>? rowid,
@@ -1349,6 +1430,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (isCompleted != null) 'is_completed': isCompleted,
       if (createdAt != null) 'created_at': createdAt,
       if (lastUpdated != null) 'last_updated': lastUpdated,
+      if (priority != null) 'priority': priority,
+      if (dueDate != null) 'due_date': dueDate,
       if (isSynced != null) 'is_synced': isSynced,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (rowid != null) 'rowid': rowid,
@@ -1364,6 +1447,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<bool>? isCompleted,
     Value<DateTime>? createdAt,
     Value<DateTime>? lastUpdated,
+    Value<int>? priority,
+    Value<DateTime?>? dueDate,
     Value<bool>? isSynced,
     Value<bool>? isDeleted,
     Value<int>? rowid,
@@ -1377,6 +1462,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      priority: priority ?? this.priority,
+      dueDate: dueDate ?? this.dueDate,
       isSynced: isSynced ?? this.isSynced,
       isDeleted: isDeleted ?? this.isDeleted,
       rowid: rowid ?? this.rowid,
@@ -1410,6 +1497,12 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (lastUpdated.present) {
       map['last_updated'] = Variable<DateTime>(lastUpdated.value);
     }
+    if (priority.present) {
+      map['priority'] = Variable<int>(priority.value);
+    }
+    if (dueDate.present) {
+      map['due_date'] = Variable<DateTime>(dueDate.value);
+    }
     if (isSynced.present) {
       map['is_synced'] = Variable<bool>(isSynced.value);
     }
@@ -1433,6 +1526,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('isCompleted: $isCompleted, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastUpdated: $lastUpdated, ')
+          ..write('priority: $priority, ')
+          ..write('dueDate: $dueDate, ')
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('rowid: $rowid')
@@ -3387,6 +3482,8 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<bool> isCompleted,
       Value<DateTime> createdAt,
       Value<DateTime> lastUpdated,
+      Value<int> priority,
+      Value<DateTime?> dueDate,
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -3401,6 +3498,8 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<bool> isCompleted,
       Value<DateTime> createdAt,
       Value<DateTime> lastUpdated,
+      Value<int> priority,
+      Value<DateTime?> dueDate,
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -3468,6 +3567,16 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<DateTime> get lastUpdated => $composableBuilder(
     column: $table.lastUpdated,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get dueDate => $composableBuilder(
+    column: $table.dueDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3549,6 +3658,16 @@ class $$TasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get dueDate => $composableBuilder(
+    column: $table.dueDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isSynced => $composableBuilder(
     column: $table.isSynced,
     builder: (column) => ColumnOrderings(column),
@@ -3619,6 +3738,12 @@ class $$TasksTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get priority =>
+      $composableBuilder(column: $table.priority, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get dueDate =>
+      $composableBuilder(column: $table.dueDate, builder: (column) => column);
+
   GeneratedColumn<bool> get isSynced =>
       $composableBuilder(column: $table.isSynced, builder: (column) => column);
 
@@ -3685,6 +3810,8 @@ class $$TasksTableTableManager
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastUpdated = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<DateTime?> dueDate = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -3697,6 +3824,8 @@ class $$TasksTableTableManager
                 isCompleted: isCompleted,
                 createdAt: createdAt,
                 lastUpdated: lastUpdated,
+                priority: priority,
+                dueDate: dueDate,
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 rowid: rowid,
@@ -3711,6 +3840,8 @@ class $$TasksTableTableManager
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastUpdated = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<DateTime?> dueDate = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -3723,6 +3854,8 @@ class $$TasksTableTableManager
                 isCompleted: isCompleted,
                 createdAt: createdAt,
                 lastUpdated: lastUpdated,
+                priority: priority,
+                dueDate: dueDate,
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 rowid: rowid,

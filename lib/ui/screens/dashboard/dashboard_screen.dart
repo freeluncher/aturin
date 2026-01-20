@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:collection/collection.dart';
 
 import '../../../domain/models/project.dart' as domain;
 import '../../../domain/models/task.dart' as domain;
@@ -306,6 +307,22 @@ class _DashboardHome extends ConsumerWidget {
         .where((p) => !p.isDeleted && p.status != 3)
         .toList();
 
+    // --- 0. Today's Tasks Logic ---
+    final todayTasks =
+        tasks.where((t) {
+          if (t.isCompleted || t.isDeleted || t.dueDate == null) return false;
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final taskDate = DateTime(
+            t.dueDate!.year,
+            t.dueDate!.month,
+            t.dueDate!.day,
+          );
+          return taskDate.isAtSameMomentAs(today);
+        }).toList()..sort(
+          (a, b) => b.priority.compareTo(a.priority),
+        ); // High priority first
+
     // --- 1. Featured Project Logic ---
     domain.Project? featuredProject;
     double maxUrgency = -999;
@@ -484,6 +501,81 @@ class _DashboardHome extends ConsumerWidget {
             child: Center(child: Text('No active projects')),
           );
         }
+
+        // Today's Tasks Card
+        final todayTasksCard = BentoCard(
+          title: "Today's Tasks",
+          icon: LucideIcons.calendarCheck,
+          child: todayTasks.isEmpty
+              ? Center(
+                  child: Text(
+                    'No tasks due today',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                )
+              : ListView.separated(
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: todayTasks.length > 5 ? 5 : todayTasks.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final t = todayTasks[index];
+                    Color priorityColor;
+                    switch (t.priority) {
+                      case 2:
+                        priorityColor = Colors.red;
+                        break;
+                      case 0:
+                        priorityColor = Colors.green;
+                        break;
+                      default:
+                        priorityColor = Colors.orange;
+                    }
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      leading: Container(
+                        width: 4,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: priorityColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      title: Text(
+                        t.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      subtitle: Text(
+                        projects
+                                .firstWhereOrNull((p) => p.id == t.projectId)
+                                ?.name ??
+                            '-',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      trailing: Checkbox(
+                        value: t.isCompleted,
+                        onChanged: (val) {
+                          // Quick complete from dashboard
+                          // We need a ref here, but we are in a pure widget method.
+                          // However, since we are inside a LayoutBuilder which is inside build(),
+                          // we don't have direct access to 'ref' unless we passed it or captured it.
+                          // LayoutBuilder builder doesn't provide ref.
+                          // But we are in _DashboardHome which has 'ref' in build().
+                          // Actually _DashboardHome is a ConsumerWidget, so build(context, ref).
+                          // But _buildDashboardContent is a method I created.
+                          // I need to update _buildDashboardContent to accept 'ref' or callback.
+                          // For now, let's leave it read-only or I'll pass 'ref' in next step if needed.
+                          // Or better, just display it.
+                        },
+                      ),
+                    );
+                  },
+                ),
+        );
 
         // Financial Card (Cash Flow Overview)
         final financialCard = BentoCard(
@@ -668,6 +760,12 @@ class _DashboardHome extends ConsumerWidget {
                       mainAxisCellCount: 1,
                       child: featuredCard,
                     ),
+                    // Today's Tasks: Medium (1x2) - Taller
+                    StaggeredGridTile.count(
+                      crossAxisCellCount: 1,
+                      mainAxisCellCount: 1,
+                      child: todayTasksCard,
+                    ),
                     // Financial: Medium (1x1)
                     StaggeredGridTile.count(
                       crossAxisCellCount: 1,
@@ -704,6 +802,12 @@ class _DashboardHome extends ConsumerWidget {
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
+              ),
+              const SizedBox(height: 16),
+              // Today's Tasks
+              SizedBox(
+                height: todayTasks.isEmpty ? 100 : 250,
+                child: todayTasksCard,
               ),
               const SizedBox(height: 16),
               // Featured

@@ -386,7 +386,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
                     items: const [
                       DropdownMenuItem(value: 0, child: Text('Perencanaan')),
                       DropdownMenuItem(value: 1, child: Text('Aktif')),
-                      DropdownMenuItem(value: 2, child: Text('Testing/Revisi')),
+                      DropdownMenuItem(value: 2, child: Text('Review')),
                       DropdownMenuItem(value: 3, child: Text('Selesai')),
                     ],
                     onChanged: (val) => setState(() => _status = val ?? 1),

@@ -86,7 +86,7 @@ extension ProjectExtensions on Project {
       case 1:
         return 'Aktif dikerjakan 🔨';
       case 2:
-        return 'Testing/Revisi 🧪';
+        return 'Review 🔍';
       case 3:
         return 'Selesai ✅';
       default:

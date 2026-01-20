@@ -529,7 +529,7 @@ class _StatusBadge extends StatelessWidget {
         color = Colors.orange;
         break;
       case 2:
-        text = "Testing";
+        text = "Review";
         color = Colors.purple;
         break;
       case 3:

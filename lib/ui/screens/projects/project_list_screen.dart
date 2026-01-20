@@ -74,7 +74,7 @@ class _ProjectListScreenState extends ConsumerState<ProjectListScreen> {
                   options: const {
                     0: 'Planning',
                     1: 'Active',
-                    2: 'Testing',
+                    2: 'Review',
                     3: 'Completed',
                   },
                 ),
@@ -167,7 +167,7 @@ class _ProjectListScreenState extends ConsumerState<ProjectListScreen> {
   }
 
   Widget _buildGroupedList(BuildContext context, List<Project> projects) {
-    // Determine sort/group order: Planning -> Active -> Testing -> Completed
+    // Determine sort/group order: Planning -> Active -> Review -> Completed
     final groups = groupBy(projects, (p) => p.status);
     final sortedKeys = groups.keys.toList()..sort();
 
@@ -268,7 +268,7 @@ class _ProjectCard extends ConsumerWidget {
           itemBuilder: (context) => [
             const PopupMenuItem(value: 0, child: Text('📝 Planning')),
             const PopupMenuItem(value: 1, child: Text('🚀 Active')),
-            const PopupMenuItem(value: 2, child: Text('🧪 Testing')),
+            const PopupMenuItem(value: 2, child: Text('🔍 Review')),
             const PopupMenuItem(value: 3, child: Text('✅ Completed')),
           ],
           child: Container(
@@ -341,7 +341,7 @@ Color _getStatusColor(BuildContext context, int status) {
       return Colors.blue;
     case 1: // Active
       return Colors.orange;
-    case 2: // Testing
+    case 2: // Review
       return Colors.purple;
     case 3: // Completed
       return Colors.green;
@@ -357,7 +357,7 @@ String _getStatusLabel(int status) {
     case 1:
       return 'Active';
     case 2:
-      return 'Testing';
+      return 'Review';
     case 3:
       return 'Completed';
     default:

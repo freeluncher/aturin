@@ -24,6 +24,7 @@ dependencies:
   encrypt: ^5.0.3
   collection: ^1.19.1
   intl: ^0.20.2
+  equatable: ^2.0.8
 
 dev_dependencies:
   flutter_test:

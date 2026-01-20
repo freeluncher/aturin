@@ -34,8 +34,13 @@ class SyncService {
         _db.projects,
       )..where((t) => t.isSynced.equals(false))).get();
 
+      final failedProjectIds = <String>{};
+
       for (var project in unsyncedProjects) {
-        await _syncUpProject(project);
+        final success = await _syncUpProject(project);
+        if (!success) {
+          failedProjectIds.add(project.id);
+        }
       }
 
       // 2. Sync Tasks
@@ -44,6 +49,12 @@ class SyncService {
       )..where((t) => t.isSynced.equals(false))).get();
 
       for (var task in unsyncedTasks) {
+        if (failedProjectIds.contains(task.projectId)) {
+          debugPrint(
+            'Skipping task sync ${task.id} due to failed project sync',
+          );
+          continue;
+        }
         await _syncUpTask(task);
       }
 
@@ -53,7 +64,29 @@ class SyncService {
       )..where((t) => t.isSynced.equals(false))).get();
 
       for (var item in unsyncedVault) {
+        if (item.projectId != null &&
+            failedProjectIds.contains(item.projectId)) {
+          debugPrint(
+            'Skipping vault sync ${item.id} due to failed project sync',
+          );
+          continue;
+        }
         await _syncUpVault(item);
+      }
+
+      // 4. Sync Invoices Up
+      final unsyncedInvoices = await (_db.select(
+        _db.invoices,
+      )..where((t) => t.isSynced.equals(false))).get();
+
+      for (var invoice in unsyncedInvoices) {
+        if (failedProjectIds.contains(invoice.projectId)) {
+          debugPrint(
+            'Skipping invoice sync ${invoice.id} due to failed project sync',
+          );
+          continue;
+        }
+        await _syncUpInvoice(invoice);
       }
 
       debugPrint('SyncUp completed');
@@ -110,6 +143,9 @@ class SyncService {
       // 3. Sync Vault Down
       await _syncDownVault();
 
+      // 4. Sync Invoices Down
+      await _syncDownInvoices();
+
       debugPrint('SyncDown completed');
     } catch (e) {
       debugPrint('SyncDown failed: $e');
@@ -118,7 +154,7 @@ class SyncService {
 
   // --- Project Sync Logic ---
 
-  Future<void> _syncUpProject(Project project) async {
+  Future<bool> _syncUpProject(Project project) async {
     try {
       final data = {
         'id': project.id,
@@ -135,8 +171,11 @@ class SyncService {
 
       await (_db.update(_db.projects)..where((t) => t.id.equals(project.id)))
           .write(ProjectsCompanion(isSynced: const Value(true)));
+
+      return true;
     } catch (e) {
       debugPrint('Failed to sync up project ${project.id}: $e');
+      return false;
     }
   }
 
@@ -214,6 +253,47 @@ class SyncService {
         TasksCompanion(isSynced: const Value(true)),
       );
     } catch (e) {
+      // Check for FK Violation (Project missing on server)
+      if (e.toString().contains('23503') ||
+          e.toString().contains('foreign key constraint')) {
+        debugPrint(
+          'FK Violation for Task ${task.id}. Attempting to heal parent project...',
+        );
+
+        final project = await (_db.select(
+          _db.projects,
+        )..where((p) => p.id.equals(task.projectId))).getSingleOrNull();
+        if (project != null) {
+          debugPrint(
+            'Parent project found locally. Force syncing project ${project.id}...',
+          );
+          final projectSuccess = await _syncUpProject(
+            project,
+          ); // Ensure this force-upserts
+          if (projectSuccess) {
+            debugPrint('Project healed. Retrying task sync...');
+            // Retry Upsert
+            try {
+              final data = {
+                'id': task.id,
+                'project_id': task.projectId,
+                'title': task.title,
+                'description': task.description,
+                'is_completed': task.isCompleted,
+                'created_at': task.createdAt.toIso8601String(),
+                'last_updated': task.lastUpdated.toIso8601String(),
+                'is_deleted': task.isDeleted,
+              };
+              await _supabase.from('tasks').upsert(data);
+              await (_db.update(_db.tasks)..where((t) => t.id.equals(task.id)))
+                  .write(TasksCompanion(isSynced: const Value(true)));
+              return; // Success on retry
+            } catch (retryError) {
+              debugPrint('Retry failed for task ${task.id}: $retryError');
+            }
+          }
+        }
+      }
       debugPrint('Failed to sync up task ${task.id}: $e');
     }
   }
@@ -388,6 +468,132 @@ class SyncService {
       }
     } catch (e) {
       debugPrint('SyncDown Vault failed: $e');
+    }
+  }
+  // --- Invoice Sync Logic ---
+
+  Future<void> _syncUpInvoice(Invoice invoice) async {
+    try {
+      if (invoice.isDeleted) {
+        await _supabase.from('invoices').delete().eq('id', invoice.id);
+        await _db
+            .delete(_db.invoices)
+            .delete(InvoicesCompanion(id: Value(invoice.id)));
+      } else {
+        final data = {
+          'id': invoice.id,
+          'project_id': invoice.projectId,
+          'title': invoice.title,
+          'amount': invoice.amount,
+          'status': invoice.status,
+          'due_date': invoice.dueDate.toIso8601String(),
+          'created_at': invoice.createdAt.toIso8601String(),
+          'last_updated': DateTime.now()
+              .toIso8601String(), // Always update last_updated
+          'is_deleted': false,
+        };
+
+        await _supabase.from('invoices').upsert(data);
+
+        await (_db.update(_db.invoices)..where((t) => t.id.equals(invoice.id)))
+            .write(InvoicesCompanion(isSynced: const Value(true)));
+      }
+    } catch (e) {
+      // Check for FK Violation
+      if (e.toString().contains('23503') ||
+          e.toString().contains('foreign key constraint')) {
+        debugPrint(
+          'FK Violation for Invoice ${invoice.id}. Attempting to heal parent project...',
+        );
+
+        final project = await (_db.select(
+          _db.projects,
+        )..where((p) => p.id.equals(invoice.projectId))).getSingleOrNull();
+        if (project != null) {
+          debugPrint(
+            'Parent project found locally. Force syncing project ${project.id}...',
+          );
+          final projectSuccess = await _syncUpProject(project);
+          if (projectSuccess) {
+            debugPrint('Project healed. Retrying invoice sync...');
+            try {
+              // Retry Upsert (Code duplication for now, but safe)
+              final data = {
+                'id': invoice.id,
+                'project_id': invoice.projectId,
+                'title': invoice.title,
+                'amount': invoice.amount,
+                'status': invoice.status,
+                'due_date': invoice.dueDate.toIso8601String(),
+                'created_at': invoice.createdAt.toIso8601String(),
+                'last_updated': DateTime.now().toIso8601String(),
+                'is_deleted': false,
+              };
+
+              await _supabase.from('invoices').upsert(data);
+              await (_db.update(_db.invoices)
+                    ..where((t) => t.id.equals(invoice.id)))
+                  .write(InvoicesCompanion(isSynced: const Value(true)));
+              return; // Success on retry
+            } catch (retryError) {
+              debugPrint('Retry failed for invoice ${invoice.id}: $retryError');
+            }
+          }
+        }
+      }
+      debugPrint('Failed to sync up invoice ${invoice.id}: $e');
+    }
+  }
+
+  Future<void> _syncDownInvoices() async {
+    try {
+      final response = await _supabase.from('invoices').select();
+      final remoteInvoices = response as List<dynamic>;
+
+      for (var data in remoteInvoices) {
+        final id = data['id'] as String;
+        // Basic upsert logic
+        final localInvoice = await (_db.select(
+          _db.invoices,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+
+        final serverCreatedAt = DateTime.parse(data['created_at'] as String);
+        final serverDueDate = DateTime.parse(data['due_date'] as String);
+
+        if (localInvoice == null) {
+          await _db
+              .into(_db.invoices)
+              .insert(
+                InvoicesCompanion.insert(
+                  id: Value(id),
+                  projectId: data['project_id'] as String,
+                  title: data['title'] as String,
+                  amount: (data['amount'] as num).toDouble(),
+                  status: Value(data['status'] as String),
+                  dueDate: serverDueDate,
+                  createdAt: Value(serverCreatedAt),
+                  serverId: Value(id),
+                  isSynced: const Value(true),
+                  isDeleted: const Value(false),
+                ),
+              );
+        } else {
+          // Simple overwrite for now (Server Wins)
+          // In real app, check last_updated if available
+          await (_db.update(_db.invoices)..where((t) => t.id.equals(id))).write(
+            InvoicesCompanion(
+              projectId: Value(data['project_id'] as String),
+              title: Value(data['title'] as String),
+              amount: Value((data['amount'] as num).toDouble()),
+              status: Value(data['status'] as String),
+              dueDate: Value(serverDueDate),
+              isSynced: const Value(true),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('SyncDown Invoices failed: $e');
     }
   }
 }

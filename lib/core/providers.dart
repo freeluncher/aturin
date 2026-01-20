@@ -7,6 +7,9 @@ import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/vault_repository.dart'; // Added
 import '../../data/repositories/vault_repository_impl.dart'; // Added
+import '../../domain/repositories/invoice_repository.dart'; // Added
+import '../../data/repositories/invoice_repository_impl.dart'; // Added
+import '../../domain/models/invoice.dart' as domain;
 import '../../data/local/app_database.dart';
 import '../data/services/sync_service.dart';
 import 'supabase_config.dart';
@@ -45,6 +48,11 @@ final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
   return VaultRepositoryImpl(db);
 });
 
+final invoiceRepositoryProvider = Provider<InvoiceRepository>((ref) {
+  final db = ref.watch(databaseProvider);
+  return InvoiceRepositoryImpl(db);
+});
+
 // Task Stream Provider
 final allTasksStreamProvider = StreamProvider.autoDispose((ref) {
   return ref.watch(projectRepositoryProvider).getAllTasks();
@@ -64,7 +72,7 @@ final connectivityStreamProvider = StreamProvider<bool>((ref) {
 });
 
 // Invoices Stream Provider
-final allInvoicesStreamProvider = StreamProvider.autoDispose((ref) {
-  final database = ref.watch(databaseProvider);
-  return database.select(database.invoices).watch();
-});
+final allInvoicesStreamProvider =
+    StreamProvider.autoDispose<List<domain.Invoice>>((ref) {
+      return ref.watch(invoiceRepositoryProvider).getAllInvoices();
+    });

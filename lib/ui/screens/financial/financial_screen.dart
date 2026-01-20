@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 
+import '../../../domain/models/invoice.dart' as domain;
+import 'add_edit_invoice_sheet.dart'; // Added
 import '../../../core/providers.dart';
-import '../../../data/local/app_database.dart';
 
 class FinancialScreen extends ConsumerStatefulWidget {
   const FinancialScreen({super.key});
@@ -42,10 +43,23 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddInvoiceSheet(context),
+        icon: const Icon(LucideIcons.plus),
+        label: const Text('Add Invoice'),
+      ),
       body: TabBarView(
         controller: _tabController,
         children: [_buildSummaryTab(ref), _buildInvoicesTab(ref)],
       ),
+    );
+  }
+
+  void _showAddInvoiceSheet(BuildContext context, [domain.Invoice? invoice]) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => AddEditInvoiceSheet(invoice: invoice),
     );
   }
 
@@ -162,7 +176,10 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
           itemCount: sortedInvoices.length,
           itemBuilder: (context, index) {
             final invoice = sortedInvoices[index];
-            return _InvoiceListTile(invoice: invoice);
+            return _InvoiceListTile(
+              invoice: invoice,
+              onTap: () => _showAddInvoiceSheet(context, invoice),
+            );
           },
         );
       },
@@ -172,10 +189,13 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
   }
 }
 
-class _InvoiceListTile extends StatelessWidget {
-  final Invoice invoice;
+// ...
 
-  const _InvoiceListTile({required this.invoice});
+class _InvoiceListTile extends StatelessWidget {
+  final domain.Invoice invoice;
+  final VoidCallback onTap;
+
+  const _InvoiceListTile({required this.invoice, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -206,6 +226,7 @@ class _InvoiceListTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
+        onTap: onTap,
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(

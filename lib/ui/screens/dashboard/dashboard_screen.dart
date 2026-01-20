@@ -6,6 +6,7 @@ import 'package:collection/collection.dart';
 
 import '../../../domain/models/project.dart' as domain;
 import '../../../domain/models/task.dart' as domain;
+import '../../../domain/models/invoice.dart' as domain;
 import '../../../domain/logic/project_analytics.dart'; // Logic Extension
 
 import '../../../core/providers.dart';
@@ -17,8 +18,6 @@ import '../vault/vault_screen.dart';
 import '../../widgets/connectivity_indicator.dart';
 import '../tasks/add_edit_task_bottom_sheet.dart';
 import '../financial/financial_screen.dart';
-import '../../../data/local/app_database.dart'
-    show Invoice; // Direct import for now as it's not in domain models
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -299,7 +298,7 @@ class _DashboardHome extends ConsumerWidget {
     BuildContext context,
     List<domain.Project> projects,
     List<domain.Task> tasks,
-    List<Invoice> invoices,
+    List<domain.Invoice> invoices,
     bool isOnline,
   ) {
     final theme = Theme.of(context);

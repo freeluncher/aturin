@@ -115,7 +115,7 @@ class _DesktopLayout extends ConsumerWidget {
               ),
               NavigationRailDestination(
                 icon: Icon(LucideIcons.shield),
-                label: Text('Vault'),
+                label: Text('Brankas'),
               ),
             ],
             trailing: Expanded(

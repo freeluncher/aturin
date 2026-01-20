@@ -60,4 +60,37 @@ extension ProjectExtensions on Project {
       return [];
     }
   }
+
+  // --- WhatsApp Summary ---
+  String get whatsAppSummary {
+    final buffer = StringBuffer();
+    buffer.writeln('*Laporan Status Proyek*');
+    buffer.writeln('📋 Proyek: $name');
+    buffer.writeln('👤 Klien: ${clientName ?? '-'}');
+    buffer.writeln('📅 Deadline: ${urgencyText}');
+    buffer.writeln('');
+
+    // We can't access tasks directly here unless passed, but we can summarize metadata
+    buffer.writeln('Status: ${_getStatusText(status)}');
+
+    // Note: To include specific task progress, we'd need to pass the task list.
+    // For now, this is a metadata summary.
+
+    return buffer.toString();
+  }
+
+  String _getStatusText(int status) {
+    switch (status) {
+      case 0:
+        return 'Perencanaan 📝';
+      case 1:
+        return 'Aktif dikerjakan 🔨';
+      case 2:
+        return 'Testing/Revisi 🧪';
+      case 3:
+        return 'Selesai ✅';
+      default:
+        return 'Unknown';
+    }
+  }
 }

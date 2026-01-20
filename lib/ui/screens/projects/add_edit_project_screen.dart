@@ -7,6 +7,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/providers.dart';
 import '../../../domain/models/project.dart';
 
+import '../../../domain/models/task.dart'; // Import Task model
+
 class AddEditProjectScreen extends ConsumerStatefulWidget {
   final Project? project;
 
@@ -31,6 +33,54 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
   DateTime? _selectedDeadline;
   int _status = 1; // Default Active
   bool _isLoading = false;
+
+  // Template System
+  String? _selectedTemplate;
+  final Map<String, List<String>> _taskTemplates = {
+    'Skripsi/Tesis 🎓': [
+      'Judul & Proposal',
+      'BAB 1 Pendahuluan',
+      'BAB 2 Tinjauan Pustaka',
+      'BAB 3 Metodologi',
+      'Kuesioner/Data',
+      'Olah Data',
+      'BAB 4 Hasil',
+      'BAB 5 Penutup',
+      'Daftar Pustaka',
+      'Revisi Dosen',
+    ],
+    'Desain Logo 🎨': [
+      'Briefing',
+      'Moodboard',
+      'Sketsa Kasar',
+      'Draft Digital',
+      'Presentasi',
+      'Revisi',
+      'Final Files',
+    ],
+    'Joki Tugas 📝': [
+      'Analisis Soal',
+      'Pengerjaan',
+      'Pengecekan',
+      'Kirim File',
+    ],
+    'Website Development 💻': [
+      'Requirement Analysis',
+      'UI/UX Design',
+      'Frontend Dev',
+      'Backend Dev',
+      'Integration',
+      'Testing',
+      'Deployment',
+    ],
+    'Undangan Digital 💌': [
+      'Data Pengantin',
+      'Pilih Tema/Musik',
+      'Input Konten',
+      'Revisi',
+      'Sebar Link',
+    ],
+  };
 
   @override
   void initState() {
@@ -97,8 +147,9 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
 
       if (widget.project == null) {
         // Create
+        final newProjectId = const Uuid().v4();
         final newProject = Project(
-          id: const Uuid().v4(),
+          id: newProjectId,
           name: _nameController.text.trim(),
           description: _descController.text.trim(),
           createdAt: now,
@@ -112,6 +163,28 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
           status: _status,
         );
         await ref.read(projectRepositoryProvider).createProject(newProject);
+
+        // --- Template Logic ---
+        if (_selectedTemplate != null &&
+            _taskTemplates.containsKey(_selectedTemplate)) {
+          final tasks = _taskTemplates[_selectedTemplate]!;
+          final taskRepo = ref.read(projectRepositoryProvider);
+
+          for (var title in tasks) {
+            final newTask = Task(
+              id: const Uuid().v4(),
+              projectId: newProjectId,
+              title: title,
+              isCompleted: false,
+              createdAt: DateTime.now(),
+              lastUpdated: DateTime.now(),
+              isSynced: false,
+              isDeleted: false,
+              priority: 1, // Medium
+            );
+            await taskRepo.createTask(newTask);
+          }
+        }
       } else {
         // Update
         final updatedProject = Project(
@@ -134,6 +207,9 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
         await ref.read(projectRepositoryProvider).updateProject(updatedProject);
       }
 
+      // Trigger sync for new project/tasks
+      ref.read(syncServiceProvider).syncUp();
+
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
@@ -150,7 +226,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.project == null ? 'New Project' : 'Edit Project'),
+        title: Text(widget.project == null ? 'Proyek Baru' : 'Edit Proyek'),
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.save),
@@ -164,22 +240,100 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
           padding: const EdgeInsets.all(16.0),
           children: [
             // Basic Info
-            Text('Basic Info', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Informasi Dasar',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
+
+            // --- Template Selector (Only for new projects) ---
+            if (widget.project == null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.5),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          LucideIcons.wand2,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Gunakan Template (Opsional)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _selectedTemplate,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                      ),
+                      hint: const Text('Pilih Template Tugas...'),
+                      items: _taskTemplates.keys
+                          .map(
+                            (t) => DropdownMenuItem(value: t, child: Text(t)),
+                          )
+                          .toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedTemplate = val;
+                          // Auto-fill some fields based on template?
+                          // For now just tasks.
+                        });
+                      },
+                    ),
+                    if (_selectedTemplate != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Akan membuat ${_taskTemplates[_selectedTemplate]!.length} tugas otomatis.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
-                labelText: 'Project Name',
+                labelText: 'Nama Proyek',
                 border: OutlineInputBorder(),
               ),
               validator: (val) =>
-                  val == null || val.isEmpty ? 'Required' : null,
+                  val == null || val.isEmpty ? 'Wajib diisi' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _descController,
               decoration: const InputDecoration(
-                labelText: 'Description',
+                labelText: 'Deskripsi',
                 border: OutlineInputBorder(),
               ),
               maxLines: 2,
@@ -187,7 +341,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
             const SizedBox(height: 24),
 
             // Client Info
-            Text('Client Info', style: Theme.of(context).textTheme.titleMedium),
+            Text('Info Klien', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -195,7 +349,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
                   child: TextFormField(
                     controller: _clientNameController,
                     decoration: const InputDecoration(
-                      labelText: 'Client Name',
+                      labelText: 'Nama Klien/Dosen',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -205,7 +359,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
                   child: TextFormField(
                     controller: _clientContactController,
                     decoration: const InputDecoration(
-                      labelText: 'Contact (Email/Phone)',
+                      labelText: 'Kontak (HP/Email)',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -216,7 +370,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
 
             // Status & Deadline
             Text(
-              'Status & Timeline',
+              'Status & Deadline',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -230,10 +384,10 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
                       border: OutlineInputBorder(),
                     ),
                     items: const [
-                      DropdownMenuItem(value: 0, child: Text('Planning')),
-                      DropdownMenuItem(value: 1, child: Text('Active')),
-                      DropdownMenuItem(value: 2, child: Text('Testing')),
-                      DropdownMenuItem(value: 3, child: Text('Completed')),
+                      DropdownMenuItem(value: 0, child: Text('Perencanaan')),
+                      DropdownMenuItem(value: 1, child: Text('Aktif')),
+                      DropdownMenuItem(value: 2, child: Text('Testing/Revisi')),
+                      DropdownMenuItem(value: 3, child: Text('Selesai')),
                     ],
                     onChanged: (val) => setState(() => _status = val ?? 1),
                   ),
@@ -258,14 +412,14 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
                     },
                     child: InputDecorator(
                       decoration: const InputDecoration(
-                        labelText: 'Deadline',
+                        labelText: 'Tenggat Waktu',
                         border: OutlineInputBorder(),
                         suffixIcon: Icon(LucideIcons.calendar),
                       ),
                       child: Text(
                         _selectedDeadline != null
                             ? '${_selectedDeadline!.day}/${_selectedDeadline!.month}/${_selectedDeadline!.year}'
-                            : 'Set Deadline',
+                            : 'Pilih Tanggal',
                       ),
                     ),
                   ),
@@ -276,7 +430,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
 
             // Financials
             Text(
-              'Financials (Optional)',
+              'Keuangan (Opsional)',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -287,7 +441,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
                     controller: _budgetController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: 'Total Budget (Rp)',
+                      labelText: 'Total Nilai (Rp)',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -297,13 +451,16 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
             const SizedBox(height: 24),
 
             // Tech Stack
-            Text('Technical', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Kategori & Label',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _techStackController,
               decoration: const InputDecoration(
-                labelText: 'Tech Stack (Comma separated)',
-                hintText: 'Flutter, Supabase, Riverpod...',
+                labelText: 'Kategori/Label (Pisahkan dengan koma)',
+                hintText: 'Skripsi, Desain, Website, Joki...',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -312,7 +469,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
             FilledButton.icon(
               onPressed: _isLoading ? null : _saveProject,
               icon: const Icon(LucideIcons.save),
-              label: Text(_isLoading ? 'Saving...' : 'Save Project'),
+              label: Text(_isLoading ? 'Menyimpan...' : 'Simpan Proyek'),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(double.infinity, 48),
               ),

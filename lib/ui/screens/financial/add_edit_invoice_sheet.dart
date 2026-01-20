@@ -187,6 +187,32 @@ class _AddEditInvoiceSheetState extends ConsumerState<AddEditInvoiceSheet> {
                     val == null || val.isEmpty ? 'Required' : null,
                 textCapitalization: TextCapitalization.sentences,
               ),
+              const SizedBox(height: 8),
+              // Quick Tags
+              Wrap(
+                spacing: 8,
+                children:
+                    [
+                          'DP 30%',
+                          'DP 50%',
+                          'Termin 1',
+                          'Pelunasan',
+                          'Reimbursement',
+                        ]
+                        .map(
+                          (label) => ActionChip(
+                            label: Text(
+                              label,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            onPressed: () {
+                              _titleController.text = label;
+                            },
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        )
+                        .toList(),
+              ),
               const SizedBox(height: 16),
 
               // Amount

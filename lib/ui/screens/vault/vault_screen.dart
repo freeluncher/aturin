@@ -169,7 +169,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
         title: Text(
           widget.categoryFilter != null
               ? '${widget.categoryFilter} Vault'
-              : 'Developer Vault',
+              : 'Brankas Data',
         ),
         actions: [
           IconButton(

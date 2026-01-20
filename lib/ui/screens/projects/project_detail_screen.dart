@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For Clipboard
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -451,7 +452,10 @@ class _SidePanel extends StatelessWidget {
           const SizedBox(height: 24),
 
           if (techs.isNotEmpty) ...[
-            Text("Tech Stack", style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              "Kategori/Label",
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -486,7 +490,7 @@ class _SidePanel extends StatelessWidget {
           const SizedBox(height: 8),
           ListTile(
             leading: const Icon(LucideIcons.shield),
-            title: const Text("Open Vault"),
+            title: const Text("Buka Brankas"),
             subtitle: const Text("View Secrets"),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

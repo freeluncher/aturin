@@ -1,6 +1,6 @@
 name: aturin
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0
 
 environment:
@@ -26,6 +26,8 @@ dependencies:
   intl: ^0.20.2
   equatable: ^2.0.8
   path: ^1.9.1
+  flutter_svg: ^2.0.7
+  flutter_native_splash: ^2.4.7
 
 dev_dependencies:
   flutter_test:
@@ -33,8 +35,25 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.30.1
   build_runner: ^2.10.5
+  flutter_launcher_icons: ^0.13.1
+
+flutter_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/images/icon-aturin.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/images/icon-aturin.png"
 
 flutter:
   uses-material-design: true
   assets:
     - .env
+    - assets/images/
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: "assets/images/aturin-logo.png"
+  android_12:
+    image: "assets/images/aturin-logo.png"
+    icon_background_color: "#FFFFFF"

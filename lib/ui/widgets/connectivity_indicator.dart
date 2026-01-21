@@ -19,35 +19,42 @@ class ConnectivityIndicator extends ConsumerWidget {
         // Top Right Floating Indicator (Minimalist)
         return Positioned(
           top: MediaQuery.of(context).viewPadding.top + 8, // Below status bar
-          right: 16,
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(20),
-            color: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.error,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    LucideIcons.wifiOff,
-                    size: 14,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'Offline',
-                    style: TextStyle(
+          left: 0,
+          right: 0,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.error,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      LucideIcons.wifiOff,
+                      size: 14,
                       color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Offline',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

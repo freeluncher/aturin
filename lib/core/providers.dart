@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -65,10 +66,27 @@ final projectsStreamProvider = StreamProvider.autoDispose((ref) {
 
 // Connectivity Stream Provider
 // Emits true if online, false if offline
-final connectivityStreamProvider = StreamProvider<bool>((ref) {
-  return Connectivity().onConnectivityChanged.map((results) {
-    return !results.contains(ConnectivityResult.none);
-  });
+final connectivityStreamProvider = StreamProvider<bool>((ref) async* {
+  final connectivity = Connectivity();
+  // Yield initial status
+  final initialResult = await connectivity.checkConnectivity();
+  yield !initialResult.contains(ConnectivityResult.none);
+
+  // Yield updates with error handling
+  try {
+    yield* connectivity.onConnectivityChanged
+        .map((results) {
+          return !results.contains(ConnectivityResult.none);
+        })
+        .handleError((error) {
+          // Log error or just yield last known status (or true to avoid blocking UI)
+          // On Windows, this might fail, so we fallback to assuming online if initial check passed
+          return true;
+        });
+  } catch (e) {
+    // If starting the stream fails completely
+    yield !initialResult.contains(ConnectivityResult.none);
+  }
 });
 
 // Invoices Stream Provider

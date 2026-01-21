@@ -81,19 +81,29 @@ class _DesktopLayout extends ConsumerWidget {
                 horizontal: 8.0,
                 vertical: 12.0,
               ),
-              child: FloatingActionButton.extended(
-                heroTag: 'desktop_nav_fab',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddEditProjectScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(LucideIcons.plus),
-                label: const Text('Proyek Baru'),
-                elevation: 0,
+              child: Column(
+                children: [
+                  Image.asset(
+                    'assets/images/aturin-logo.png',
+                    height: 40,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 24),
+                  FloatingActionButton.extended(
+                    heroTag: 'desktop_nav_fab',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddEditProjectScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(LucideIcons.plus),
+                    label: const Text('Proyek Baru'),
+                    elevation: 0,
+                  ),
+                ],
               ),
             ),
             destinations: const [
@@ -174,7 +184,17 @@ class _MobileLayout extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Atur.in'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/aturin-logo.png',
+              height: 32,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 12),
+            const Text('Atur.in'),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.refreshCw),

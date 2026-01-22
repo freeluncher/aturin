@@ -6,11 +6,13 @@ import '../../domain/models/invoice.dart' as domain;
 class InvoiceListTile extends StatelessWidget {
   final domain.Invoice invoice;
   final VoidCallback onTap;
+  final bool isOverdue;
 
   const InvoiceListTile({
     super.key,
     required this.invoice,
     required this.onTap,
+    this.isOverdue = false,
   });
 
   @override
@@ -23,22 +25,31 @@ class InvoiceListTile extends StatelessWidget {
     final dateFormat = DateFormat('dd MMM yyyy');
 
     Color statusColor;
-    switch (invoice.status) {
-      case 'Paid':
-        statusColor = Colors.green;
-        break;
-      case 'Sent':
-        statusColor = Colors.orange;
-        break;
-      default:
-        statusColor = Colors.grey;
+    if (isOverdue) {
+      statusColor = Colors.red;
+    } else {
+      switch (invoice.status) {
+        case 'Paid':
+          statusColor = Colors.green;
+          break;
+        case 'Sent':
+          statusColor = Colors.orange;
+          break;
+        default:
+          statusColor = Colors.grey;
+      }
     }
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 0,
+      elevation: isOverdue ? 2 : 0,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        side: BorderSide(
+          color: isOverdue
+              ? Colors.red
+              : Theme.of(context).colorScheme.outlineVariant,
+          width: isOverdue ? 2 : 1,
+        ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
@@ -64,21 +75,38 @@ class InvoiceListTile extends StatelessWidget {
               currencyFormat.format(invoice.amount),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                invoice.status,
-                style: TextStyle(
-                  color: statusColor,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+            if (isOverdue)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'OVERDUE',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  invoice.status,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),

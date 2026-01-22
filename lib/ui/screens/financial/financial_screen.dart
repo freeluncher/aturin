@@ -19,6 +19,9 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _selectedStatus = 'All';
+  String _searchQuery = '';
+  String _sortBy = 'dueDate'; // 'dueDate', 'amount', 'createdAt'
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -34,16 +37,53 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
   }
 
   List<domain.Invoice> _filterInvoices(List<domain.Invoice> invoices) {
-    if (_selectedStatus == 'All') return invoices;
-    if (_selectedStatus == 'Overdue') {
-      return invoices.where((inv) => _isOverdue(inv)).toList();
+    var filtered = invoices;
+
+    // Apply status filter
+    if (_selectedStatus != 'All') {
+      if (_selectedStatus == 'Overdue') {
+        filtered = filtered.where((inv) => _isOverdue(inv)).toList();
+      } else {
+        filtered = filtered
+            .where((inv) => inv.status == _selectedStatus)
+            .toList();
+      }
     }
-    return invoices.where((inv) => inv.status == _selectedStatus).toList();
+
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      filtered = filtered.where((inv) {
+        return inv.title.toLowerCase().contains(query) ||
+            inv.projectId.toLowerCase().contains(query);
+      }).toList();
+    }
+
+    return filtered;
+  }
+
+  List<domain.Invoice> _sortInvoices(List<domain.Invoice> invoices) {
+    final sorted = [...invoices];
+    switch (_sortBy) {
+      case 'amount':
+        sorted.sort((a, b) => b.amount.compareTo(a.amount)); // High to low
+        break;
+      case 'createdAt':
+        sorted.sort(
+          (a, b) => b.createdAt.compareTo(a.createdAt),
+        ); // Recent first
+        break;
+      case 'dueDate':
+      default:
+        sorted.sort((a, b) => a.dueDate.compareTo(b.dueDate)); // Earliest first
+    }
+    return sorted;
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -81,27 +121,65 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
   }
 
   Widget _buildSummaryTab(WidgetRef ref) {
-    // TODO: Implement advanced summary logic (Month vs Month)
-    // For now showing the same overall stats
     final invoicesAsync = ref.watch(allInvoicesStreamProvider);
 
     return invoicesAsync.when(
       data: (invoices) {
         double totalPaid = 0;
         double totalUnpaid = 0;
+        double totalOverdue = 0;
+        int overdueCount = 0;
 
         for (var inv in invoices) {
           if (inv.status == 'Paid') {
             totalPaid += inv.amount;
           } else if (inv.status == 'Sent') {
-            totalUnpaid += inv.amount;
+            if (_isOverdue(inv)) {
+              totalOverdue += inv.amount;
+              overdueCount++;
+            } else {
+              totalUnpaid += inv.amount;
+            }
           }
         }
 
-        return Padding(
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
+              // Overview header
+              Row(
+                children: [
+                  const Icon(LucideIcons.pieChart, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Financial Overview',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${invoices.length} invoices',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
               _buildSummaryCard(
                 'Total Revenue (Paid)',
                 totalPaid,
@@ -109,11 +187,20 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
                 LucideIcons.checkCircle,
               ),
               const SizedBox(height: 16),
+              if (overdueCount > 0) ...[
+                _buildSummaryCard(
+                  'Overdue ($overdueCount)',
+                  totalOverdue,
+                  Colors.red,
+                  LucideIcons.alertTriangle,
+                ),
+                const SizedBox(height: 16),
+              ],
               _buildSummaryCard(
                 'Outstanding (Unpaid)',
                 totalUnpaid,
                 Colors.orange,
-                LucideIcons.alertCircle,
+                LucideIcons.clock,
               ),
             ],
           ),
@@ -185,10 +272,131 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
           return _buildEmptyState();
         }
 
-        final filteredInvoices = _filterInvoices(invoices);
+        final filteredInvoices = _sortInvoices(_filterInvoices(invoices));
 
         return Column(
           children: [
+            // Search bar and sort controls
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search invoices...',
+                        prefixIcon: const Icon(LucideIcons.search),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(LucideIcons.x),
+                                onPressed: () {
+                                  setState(() {
+                                    _searchController.clear();
+                                    _searchQuery = '';
+                                  });
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  PopupMenuButton<String>(
+                    icon: const Icon(LucideIcons.arrowUpDown),
+                    tooltip: 'Sort by',
+                    onSelected: (value) {
+                      setState(() {
+                        _sortBy = value;
+                      });
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'dueDate',
+                        child: Row(
+                          children: [
+                            Icon(
+                              LucideIcons.calendar,
+                              size: 18,
+                              color: _sortBy == 'dueDate'
+                                  ? Theme.of(context).colorScheme.primary
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Due Date',
+                              style: TextStyle(
+                                fontWeight: _sortBy == 'dueDate'
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'amount',
+                        child: Row(
+                          children: [
+                            Icon(
+                              LucideIcons.dollarSign,
+                              size: 18,
+                              color: _sortBy == 'amount'
+                                  ? Theme.of(context).colorScheme.primary
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Amount',
+                              style: TextStyle(
+                                fontWeight: _sortBy == 'amount'
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'createdAt',
+                        child: Row(
+                          children: [
+                            Icon(
+                              LucideIcons.clock,
+                              size: 18,
+                              color: _sortBy == 'createdAt'
+                                  ? Theme.of(context).colorScheme.primary
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Created Date',
+                              style: TextStyle(
+                                fontWeight: _sortBy == 'createdAt'
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             _buildFilterChips(invoices),
             Expanded(
               child: filteredInvoices.isEmpty
@@ -208,7 +416,9 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Try selecting a different filter',
+                            _searchQuery.isNotEmpty
+                                ? 'Try a different search term'
+                                : 'Try selecting a different filter',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: Theme.of(

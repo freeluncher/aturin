@@ -23,6 +23,10 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
   String _sortBy = 'dueDate'; // 'dueDate', 'amount', 'createdAt'
   final TextEditingController _searchController = TextEditingController();
 
+  // Selection mode
+  bool _isSelectionMode = false;
+  Set<String> _selectedInvoiceIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -90,16 +94,55 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Financial'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Summary'),
-            Tab(text: 'Invoices'),
-          ],
-        ),
-      ),
+      appBar: _isSelectionMode
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(LucideIcons.x),
+                onPressed: () {
+                  setState(() {
+                    _isSelectionMode = false;
+                    _selectedInvoiceIds.clear();
+                  });
+                },
+              ),
+              title: Text('${_selectedInvoiceIds.length} selected'),
+              actions: [
+                if (_selectedInvoiceIds.isNotEmpty) ...[
+                  IconButton(
+                    icon: const Icon(LucideIcons.checkCircle),
+                    tooltip: 'Mark as Paid',
+                    onPressed: _markSelectedAsPaid,
+                  ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.trash2),
+                    tooltip: 'Delete',
+                    onPressed: _deleteSelected,
+                  ),
+                ],
+              ],
+            )
+          : AppBar(
+              title: const Text('Financial'),
+              actions: [
+                if (_tabController.index == 1) // Only show on Invoices tab
+                  IconButton(
+                    icon: const Icon(LucideIcons.checkSquare),
+                    tooltip: 'Select invoices',
+                    onPressed: () {
+                      setState(() {
+                        _isSelectionMode = true;
+                      });
+                    },
+                  ),
+              ],
+              bottom: TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Summary'),
+                  Tab(text: 'Invoices'),
+                ],
+              ),
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddInvoiceSheet(context),
         icon: const Icon(LucideIcons.plus),
@@ -589,8 +632,13 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
           ...overdue.map(
             (inv) => InvoiceListTile(
               invoice: inv,
-              onTap: () => _showAddInvoiceSheet(context, inv),
+              onTap: _isSelectionMode
+                  ? () => _toggleSelection(inv.id)
+                  : () => _showAddInvoiceSheet(context, inv),
+              onLongPress: () => _enableSelectionMode(inv.id),
               isOverdue: true,
+              isSelected: _selectedInvoiceIds.contains(inv.id),
+              isSelectionMode: _isSelectionMode,
             ),
           ),
         ],
@@ -599,7 +647,12 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
           ...sent.map(
             (inv) => InvoiceListTile(
               invoice: inv,
-              onTap: () => _showAddInvoiceSheet(context, inv),
+              onTap: _isSelectionMode
+                  ? () => _toggleSelection(inv.id)
+                  : () => _showAddInvoiceSheet(context, inv),
+              onLongPress: () => _enableSelectionMode(inv.id),
+              isSelected: _selectedInvoiceIds.contains(inv.id),
+              isSelectionMode: _isSelectionMode,
             ),
           ),
         ],
@@ -608,7 +661,12 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
           ...paid.map(
             (inv) => InvoiceListTile(
               invoice: inv,
-              onTap: () => _showAddInvoiceSheet(context, inv),
+              onTap: _isSelectionMode
+                  ? () => _toggleSelection(inv.id)
+                  : () => _showAddInvoiceSheet(context, inv),
+              onLongPress: () => _enableSelectionMode(inv.id),
+              isSelected: _selectedInvoiceIds.contains(inv.id),
+              isSelectionMode: _isSelectionMode,
             ),
           ),
         ],
@@ -617,7 +675,12 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
           ...draft.map(
             (inv) => InvoiceListTile(
               invoice: inv,
-              onTap: () => _showAddInvoiceSheet(context, inv),
+              onTap: _isSelectionMode
+                  ? () => _toggleSelection(inv.id)
+                  : () => _showAddInvoiceSheet(context, inv),
+              onLongPress: () => _enableSelectionMode(inv.id),
+              isSelected: _selectedInvoiceIds.contains(inv.id),
+              isSelectionMode: _isSelectionMode,
             ),
           ),
         ],
@@ -665,6 +728,138 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
         ],
       ),
     );
+  }
+
+  void _enableSelectionMode(String invoiceId) {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedInvoiceIds.add(invoiceId);
+    });
+  }
+
+  void _toggleSelection(String invoiceId) {
+    setState(() {
+      if (_selectedInvoiceIds.contains(invoiceId)) {
+        _selectedInvoiceIds.remove(invoiceId);
+        if (_selectedInvoiceIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedInvoiceIds.add(invoiceId);
+      }
+    });
+  }
+
+  Future<void> _markSelectedAsPaid() async {
+    if (_selectedInvoiceIds.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mark as Paid'),
+        content: Text('Mark ${_selectedInvoiceIds.length} invoice(s) as paid?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final repository = ref.read(invoiceRepositoryProvider);
+      final allInvoices = await ref.read(allInvoicesStreamProvider.future);
+      final count = _selectedInvoiceIds.length;
+
+      for (final id in _selectedInvoiceIds) {
+        final invoice = allInvoices.firstWhere((inv) => inv.id == id);
+        final updatedInvoice = invoice.copyWith(status: 'Paid');
+        await repository.updateInvoice(updatedInvoice);
+      }
+
+      if (mounted) {
+        setState(() {
+          _isSelectionMode = false;
+          _selectedInvoiceIds.clear();
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Marked $count invoice(s) as paid'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteSelected() async {
+    if (_selectedInvoiceIds.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Invoices'),
+        content: Text(
+          'Are you sure you want to delete ${_selectedInvoiceIds.length} invoice(s)? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final repository = ref.read(invoiceRepositoryProvider);
+
+      for (final id in _selectedInvoiceIds) {
+        await repository.deleteInvoice(id);
+      }
+
+      if (mounted) {
+        setState(() {
+          _isSelectionMode = false;
+          _selectedInvoiceIds.clear();
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deleted ${_selectedInvoiceIds.length} invoice(s)'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }
 

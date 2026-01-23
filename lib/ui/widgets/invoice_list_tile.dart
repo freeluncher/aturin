@@ -6,13 +6,19 @@ import '../../domain/models/invoice.dart' as domain;
 class InvoiceListTile extends StatelessWidget {
   final domain.Invoice invoice;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final bool isOverdue;
+  final bool isSelected;
+  final bool isSelectionMode;
 
   const InvoiceListTile({
     super.key,
     required this.invoice,
     required this.onTap,
+    this.onLongPress,
     this.isOverdue = false,
+    this.isSelected = false,
+    this.isSelectionMode = false,
   });
 
   @override
@@ -54,14 +60,22 @@ class InvoiceListTile extends StatelessWidget {
       ),
       child: ListTile(
         onTap: onTap,
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: statusColor.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(LucideIcons.fileText, color: statusColor, size: 20),
-        ),
+        onLongPress: onLongPress,
+        selected: isSelected,
+        leading: isSelectionMode
+            ? Checkbox(
+                value: isSelected,
+                onChanged: (_) => onTap(),
+                shape: const CircleBorder(),
+              )
+            : Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(LucideIcons.fileText, color: statusColor, size: 20),
+              ),
         title: Text(
           invoice.title,
           style: const TextStyle(fontWeight: FontWeight.bold),

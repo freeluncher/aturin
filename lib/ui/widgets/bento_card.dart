@@ -9,6 +9,9 @@ class BentoCard extends StatelessWidget {
   final double? height;
   final Color? color;
   final Widget? trailing;
+  final double? elevation;
+  final Color? borderColor;
+  final double? borderWidth;
 
   const BentoCard({
     super.key,
@@ -20,6 +23,9 @@ class BentoCard extends StatelessWidget {
     this.height,
     this.color,
     this.trailing,
+    this.elevation,
+    this.borderColor,
+    this.borderWidth,
   });
 
   @override
@@ -33,14 +39,14 @@ class BentoCard extends StatelessWidget {
         color: color ?? colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: colorScheme.onSurface.withValues(alpha: 0.1),
-          width: 1,
+          color: borderColor ?? colorScheme.onSurface.withValues(alpha: 0.1),
+          width: borderWidth ?? 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: (elevation ?? 2.0) * 0.05),
+            blurRadius: (elevation ?? 2.0) * 2,
+            offset: Offset(0, (elevation ?? 2.0)),
           ),
         ],
       ),

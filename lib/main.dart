@@ -5,6 +5,9 @@ import 'core/theme/app_theme.dart';
 import 'core/supabase_config.dart';
 import 'ui/screens/auth/auth_wrapper.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+import 'core/providers/dashboard_config_provider.dart';
+
 void main() async {
   // Ensure widgets are initialized
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,12 +17,17 @@ void main() async {
     await SupabaseConfig.initialize();
   } catch (e) {
     debugPrint("Warning: Supabase initialization failed: $e");
-    // We might want to allow running even if Supabase fails (offline mode),
-    // but providers depending on SupabaseClient inside SupabaseConfig might be null logic wise if we don't catch it right.
-    // Actually SupabaseConfig.initialize throws exception if keys missing.
   }
 
-  runApp(const ProviderScope(child: MainApp()));
+  // Initialize SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
+
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const MainApp(),
+    ),
+  );
 }
 
 class MainApp extends StatelessWidget {

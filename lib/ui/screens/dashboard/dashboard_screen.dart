@@ -18,6 +18,9 @@ import '../vault/vault_screen.dart';
 import '../../widgets/connectivity_indicator.dart';
 import '../tasks/add_edit_task_bottom_sheet.dart';
 import '../financial/financial_screen.dart';
+import '../projects/project_detail_screen.dart';
+import '../../../core/providers/dashboard_config_provider.dart';
+import 'customize_dashboard_sheet.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -206,6 +209,20 @@ class _MobileLayout extends ConsumerWidget {
               ref.read(syncServiceProvider).syncUp();
             },
           ),
+          // Customize Action
+          if (selectedIndex == 0)
+            IconButton(
+              icon: const Icon(LucideIcons.slidersHorizontal),
+              tooltip: 'Customize Dashboard',
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => const CustomizeDashboardSheet(),
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(LucideIcons.logOut),
             onPressed: () async {
@@ -286,36 +303,50 @@ class _DashboardHome extends ConsumerWidget {
     final isOnlineAsync = ref.watch(connectivityStreamProvider);
     final isOnline = isOnlineAsync.value ?? false;
 
-    return allProjects.when(
-      data: (projects) {
-        return allTasks.when(
-          data: (tasks) {
-            return allInvoices.when(
-              data: (invoices) {
-                return _buildDashboardContent(
-                  context,
-                  projects,
-                  tasks,
-                  invoices,
-                  isOnline,
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, s) =>
-                  Center(child: Text('Error loading invoices: $e')),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Error loading tasks: $e')),
-        );
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Invalidate all data providers to trigger refresh
+        ref.invalidate(projectsStreamProvider);
+        ref.invalidate(allTasksStreamProvider);
+        ref.invalidate(allInvoicesStreamProvider);
+        ref.invalidate(connectivityStreamProvider);
+
+        // Wait a bit for streams to update
+        await Future.delayed(const Duration(milliseconds: 500));
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => Center(child: Text('Error loading projects: $e')),
+      child: allProjects.when(
+        data: (projects) {
+          return allTasks.when(
+            data: (tasks) {
+              return allInvoices.when(
+                data: (invoices) {
+                  return _buildDashboardContent(
+                    context,
+                    ref, // Pass ref to function
+                    projects,
+                    tasks,
+                    invoices,
+                    isOnline,
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, s) =>
+                    Center(child: Text('Error loading invoices: $e')),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => Center(child: Text('Error loading tasks: $e')),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Center(child: Text('Error loading projects: $e')),
+      ),
     );
   }
 
   Widget _buildDashboardContent(
     BuildContext context,
+    WidgetRef ref, // Added ref parameter
     List<domain.Project> projects,
     List<domain.Task> tasks,
     List<domain.Invoice> invoices,
@@ -448,9 +479,15 @@ class _DashboardHome extends ConsumerWidget {
           featuredCard = BentoCard(
             title: 'Featured Project',
             icon: LucideIcons.star,
+            // Phase 3: Urgency-based elevation and border
+            elevation: _getProjectUrgencyElevation(featuredProject, pTasks),
+            borderColor: _isProjectCritical(featuredProject)
+                ? theme.colorScheme.error
+                : null,
+            borderWidth: _isProjectCritical(featuredProject) ? 2.0 : null,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   featuredProject.name,
@@ -460,7 +497,7 @@ class _DashboardHome extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     Container(
@@ -491,9 +528,14 @@ class _DashboardHome extends ConsumerWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    // Phase 3: Overdue badge
+                    if (remainingDays < 0) ...[
+                      const SizedBox(width: 8),
+                      _buildOverdueBadge(context, remainingDays.abs()),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 LinearProgressIndicator(
                   value: pTasks.isEmpty
                       ? 0
@@ -510,36 +552,150 @@ class _DashboardHome extends ConsumerWidget {
                   '${pTasks.where((t) => t.isCompleted).length} / ${pTasks.length} Tasks Completed',
                   style: theme.textTheme.labelSmall,
                 ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ProjectDetailScreen(project: featuredProject!),
+                          ),
+                        );
+                      },
+                      icon: const Icon(LucideIcons.eye, size: 16),
+                      label: const Text('View Details'),
+                    ),
+                  ],
+                ),
               ],
             ),
           );
         } else {
-          featuredCard = const BentoCard(
+          featuredCard = BentoCard(
             title: 'Featured Project',
             icon: LucideIcons.star,
-            child: Center(child: Text('No active projects')),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    LucideIcons.folderPlus,
+                    size: 48,
+                    color: theme.colorScheme.outline.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No Active Projects',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddEditProjectScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(LucideIcons.plus, size: 16),
+                    label: const Text('Create Project'),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 
         // Today's Tasks Card
+        final displayTasks = isDesktop
+            ? (todayTasks.length > 5 ? todayTasks.take(5).toList() : todayTasks)
+            : (todayTasks.length > 3
+                  ? todayTasks.take(3).toList()
+                  : todayTasks);
+        final hasMore = isDesktop
+            ? todayTasks.length > 5
+            : todayTasks.length > 3;
+
+        // Phase 3: Calculate overdue tasks count
+        final overdueTasksCount = todayTasks
+            .where(
+              (t) =>
+                  !t.isCompleted &&
+                  t.dueDate != null &&
+                  t.dueDate!.isBefore(DateTime.now()),
+            )
+            .length;
+
         final todayTasksCard = BentoCard(
           title: "Today's Tasks",
           icon: LucideIcons.calendarCheck,
+          // Phase 3: Show badge if there are overdue tasks
+          trailing: overdueTasksCount > 0
+              ? _buildSmallBadge(context, overdueTasksCount)
+              : null,
           child: todayTasks.isEmpty
+              // Phase 3: Improved empty state
               ? Center(
-                  child: Text(
-                    'No tasks due today',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        LucideIcons.checkCircle2,
+                        size: 48,
+                        color: Colors.green.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'All Caught Up!',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.outline,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'No tasks due today',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
                   ),
                 )
               : ListView.separated(
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: todayTasks.length > 5 ? 5 : todayTasks.length,
+                  itemCount: displayTasks.length + (hasMore ? 1 : 0),
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
-                    final t = todayTasks[index];
+                    if (index == displayTasks.length) {
+                      // "View All" footer
+                      return Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: TextButton.icon(
+                          onPressed: () {
+                            // Navigate to Tasks tab (index 2)
+                            // Need to access parent state
+                            // Since we're in a nested widget, we'll navigate to TaskListScreen
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TaskListScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(LucideIcons.arrowRight, size: 16),
+                          label: Text('View All ${todayTasks.length} Tasks'),
+                        ),
+                      );
+                    }
+                    final t = displayTasks[index];
                     Color priorityColor;
                     switch (t.priority) {
                       case 2:
@@ -577,18 +733,39 @@ class _DashboardHome extends ConsumerWidget {
                       ),
                       trailing: Checkbox(
                         value: t.isCompleted,
-                        onChanged: (val) {
-                          // Quick complete from dashboard
-                          // We need a ref here, but we are in a pure widget method.
-                          // However, since we are inside a LayoutBuilder which is inside build(),
-                          // we don't have direct access to 'ref' unless we passed it or captured it.
-                          // LayoutBuilder builder doesn't provide ref.
-                          // But we are in _DashboardHome which has 'ref' in build().
-                          // Actually _DashboardHome is a ConsumerWidget, so build(context, ref).
-                          // But _buildDashboardContent is a method I created.
-                          // I need to update _buildDashboardContent to accept 'ref' or callback.
-                          // For now, let's leave it read-only or I'll pass 'ref' in next step if needed.
-                          // Or better, just display it.
+                        onChanged: (val) async {
+                          if (val != null) {
+                            try {
+                              // Capture repository before async gap
+                              final repository = ref.read(
+                                projectRepositoryProvider,
+                              );
+                              final updated = t.copyWith(isCompleted: val);
+                              await repository.updateTask(updated);
+
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      val ? 'Task completed!' : 'Task reopened',
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to update task: $e'),
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.error,
+                                  ),
+                                );
+                              }
+                            }
+                          }
                         },
                       ),
                     );
@@ -597,86 +774,95 @@ class _DashboardHome extends ConsumerWidget {
         );
 
         // Financial Card (Cash Flow Overview)
-        final financialCard = BentoCard(
-          title: 'Cash Flow Overview',
-          icon: LucideIcons.trendingUp,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Income vs Budget',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.outline,
+        final financialCard = InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FinancialScreen()),
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: BentoCard(
+            title: 'Cash Flow Overview',
+            icon: LucideIcons.trendingUp,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Income vs Budget',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _formatCurrency(totalCollected),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _formatCurrency(totalCollected),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
-                  ),
-                  Text(
-                    'of ${_formatCurrency(totalEarned + totalPending)}', // Using Total Budget approximation
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: (totalEarned + totalPending) > 0
-                    ? (totalCollected / (totalEarned + totalPending))
-                    : 0,
-                borderRadius: BorderRadius.circular(4),
-                backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  theme.colorScheme.primary,
+                    Text(
+                      'of ${_formatCurrency(totalEarned + totalPending)}', // Using Total Budget approximation
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      LucideIcons.alertCircle,
-                      size: 16,
-                      color: theme.colorScheme.error,
-                    ),
+                const SizedBox(height: 6),
+                LinearProgressIndicator(
+                  value: (totalEarned + totalPending) > 0
+                      ? (totalCollected / (totalEarned + totalPending))
+                      : 0,
+                  borderRadius: BorderRadius.circular(4),
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    theme.colorScheme.primary,
                   ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Siap Ditagih',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.outline,
-                        ),
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      Text(
-                        _formatCurrency(outstanding),
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.error,
-                        ),
+                      child: Icon(
+                        LucideIcons.alertCircle,
+                        size: 16,
+                        color: theme.colorScheme.error,
                       ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Siap Ditagih',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                        Text(
+                          _formatCurrency(outstanding),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
 
@@ -693,7 +879,7 @@ class _DashboardHome extends ConsumerWidget {
                       context: context,
                       isScrollControlled: true,
                       builder: (context) =>
-                          AddEditTaskBottomSheet(projectId: defaultProjectId!),
+                          AddEditTaskBottomSheet(projectId: defaultProjectId),
                     );
                   }
                 : null,
@@ -754,8 +940,30 @@ class _DashboardHome extends ConsumerWidget {
           ),
         );
 
+        // Dynamic Layout Logic
+        final config = ref.watch(dashboardConfigProvider);
+        final widgetMap = {
+          'featured_project': SizedBox(
+            height: isDesktop ? null : 240,
+            child: featuredCard,
+          ),
+          'todays_tasks': SizedBox(
+            height: isDesktop ? null : (todayTasks.isEmpty ? 200 : 250),
+            child: todayTasksCard,
+          ),
+          'financial_overview': SizedBox(
+            height: isDesktop ? null : 210,
+            child: financialCard,
+          ),
+          'workload_summary': SizedBox(
+            height: isDesktop ? null : 160,
+            child: workloadCard,
+          ),
+        };
+
         // Desktop Layout (Bento Grid)
         if (isDesktop) {
+          final isVisible = config.visibleSectionIds;
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -774,29 +982,33 @@ class _DashboardHome extends ConsumerWidget {
                   crossAxisSpacing: 24,
                   children: [
                     // Featured Project: Big (2x2)
-                    StaggeredGridTile.count(
-                      crossAxisCellCount: 2,
-                      mainAxisCellCount: 1,
-                      child: featuredCard,
-                    ),
-                    // Today's Tasks: Medium (1x2) - Taller
-                    StaggeredGridTile.count(
-                      crossAxisCellCount: 1,
-                      mainAxisCellCount: 1,
-                      child: todayTasksCard,
-                    ),
+                    if (isVisible.contains('featured_project'))
+                      StaggeredGridTile.count(
+                        crossAxisCellCount: 2,
+                        mainAxisCellCount: 1,
+                        child: featuredCard,
+                      ),
+                    // Today's Tasks: Medium (1x2)
+                    if (isVisible.contains('todays_tasks'))
+                      StaggeredGridTile.count(
+                        crossAxisCellCount: 1,
+                        mainAxisCellCount: 1,
+                        child: todayTasksCard,
+                      ),
                     // Financial: Medium (1x1)
-                    StaggeredGridTile.count(
-                      crossAxisCellCount: 1,
-                      mainAxisCellCount: 1,
-                      child: financialCard,
-                    ),
+                    if (isVisible.contains('financial_overview'))
+                      StaggeredGridTile.count(
+                        crossAxisCellCount: 1,
+                        mainAxisCellCount: 1,
+                        child: financialCard,
+                      ),
                     // Workload: Medium (1x1)
-                    StaggeredGridTile.count(
-                      crossAxisCellCount: 1,
-                      mainAxisCellCount: 1,
-                      child: workloadCard,
-                    ),
+                    if (isVisible.contains('workload_summary'))
+                      StaggeredGridTile.count(
+                        crossAxisCellCount: 1,
+                        mainAxisCellCount: 1,
+                        child: workloadCard,
+                      ),
                     // Sync: Full Width (3x0.3)
                     StaggeredGridTile.count(
                       crossAxisCellCount: 3,
@@ -810,7 +1022,7 @@ class _DashboardHome extends ConsumerWidget {
           );
         }
 
-        // Mobile Layout (ListView)
+        // Mobile Layout (Dynamic List)
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -823,22 +1035,14 @@ class _DashboardHome extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              // Today's Tasks
-              SizedBox(
-                height: todayTasks.isEmpty ? 100 : 250,
-                child: todayTasksCard,
-              ),
-              const SizedBox(height: 16),
-              // Featured
-              SizedBox(height: 180, child: featuredCard),
-              const SizedBox(height: 16),
-              // Finance
-              SizedBox(height: 160, child: financialCard),
-              const SizedBox(height: 16),
-              // Workload
-              SizedBox(height: 120, child: workloadCard),
-              const SizedBox(height: 16),
-              syncBar,
+
+              // Render Visible Items in Order
+              for (final id in config.visibleSectionIds) ...[
+                if (widgetMap.containsKey(id)) ...[
+                  widgetMap[id]!,
+                  const SizedBox(height: 16),
+                ],
+              ],
             ],
           ),
         );
@@ -881,5 +1085,86 @@ class _DashboardHome extends ConsumerWidget {
       return '${(amount / 1000).toStringAsFixed(0)}rb';
     }
     return amount.toStringAsFixed(0);
+  }
+
+  // Phase 3: Urgency-based elevation
+  double _getProjectUrgencyElevation(
+    domain.Project? project,
+    List<domain.Task> tasks,
+  ) {
+    if (project == null || project.deadline == null) return 2.0;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final remainingDays = project.deadline!.difference(today).inDays;
+
+    if (remainingDays < 0) return 8.0; // Overdue - highest elevation
+    if (remainingDays < 3) return 6.0; // Critical (< 3 days)
+    if (remainingDays < 7) return 4.0; // Warning (< 7 days)
+    return 2.0; // Normal
+  }
+
+  // Phase 3: Check if project is critical (for border color)
+  bool _isProjectCritical(domain.Project? project) {
+    if (project == null || project.deadline == null) return false;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final remainingDays = project.deadline!.difference(today).inDays;
+
+    return remainingDays < 3; // Critical if < 3 days or overdue
+  }
+
+  // Phase 3: Overdue badge widget
+  Widget _buildOverdueBadge(BuildContext context, int overdueCount) {
+    if (overdueCount <= 0) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.error,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(LucideIcons.alertCircle, size: 12, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            '$overdueCount Day${overdueCount > 1 ? "s" : ""} Overdue',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Phase 3: Small badge for card trailing (task count)
+  Widget _buildSmallBadge(BuildContext context, int count) {
+    if (count <= 0) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.error,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
   }
 }

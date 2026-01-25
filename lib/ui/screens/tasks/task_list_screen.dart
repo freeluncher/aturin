@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/providers.dart';
 import '../../../domain/models/task.dart';
 import '../../../domain/models/project.dart';
+import 'add_edit_task_bottom_sheet.dart';
 
 class TaskListScreen extends ConsumerStatefulWidget {
   const TaskListScreen({super.key});
@@ -16,326 +17,679 @@ class TaskListScreen extends ConsumerStatefulWidget {
 }
 
 class _TaskListScreenState extends ConsumerState<TaskListScreen> {
-  // 0: None, 1: Project, 2: Priority
+  String _searchQuery = '';
+  String _selectedFilter = 'All'; // All, Today, Upcoming, Overdue, Completed
+
+  // Note: We'll keep the existing Grouping Mode toggles as well,
+  // but "Smart Grouping" (Date) might become the default or an option.
+  // 0: Date (Smart), 1: Project, 2: Priority, 3: None
   int _groupingMode = 0;
+
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _toggleTask(Task task) {
+    final updated = task.copyWith(
+      isCompleted: !task.isCompleted,
+      lastUpdated: DateTime.now(),
+      isSynced: false,
+    );
+    ref.read(projectRepositoryProvider).updateTask(updated);
+  }
+
+  void _deleteTask(Task task) {
+    ref.read(projectRepositoryProvider).deleteTask(task.id);
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Task deleted'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            ref.read(projectRepositoryProvider).updateTask(task);
+          },
+        ),
+      ),
+    );
+  }
+
+  List<Task> _filterTasks(List<Task> tasks) {
+    return tasks.where((t) {
+      // 1. Search Query
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final matchesTitle = t.title.toLowerCase().contains(q);
+        final matchesDesc = t.description?.toLowerCase().contains(q) ?? false;
+        if (!matchesTitle && !matchesDesc) return false;
+      }
+
+      // 2. Chip Filters
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      switch (_selectedFilter) {
+        case 'Completed':
+          return t.isCompleted;
+        case 'Overdue':
+          if (t.isCompleted || t.dueDate == null) return false;
+          final due = DateTime(
+            t.dueDate!.year,
+            t.dueDate!.month,
+            t.dueDate!.day,
+          );
+          return due.isBefore(today);
+        case 'Today':
+          if (t.isCompleted || t.dueDate == null) return false;
+          final due = DateTime(
+            t.dueDate!.year,
+            t.dueDate!.month,
+            t.dueDate!.day,
+          );
+          return due.isAtSameMomentAs(today);
+        case 'Upcoming':
+          if (t.isCompleted || t.dueDate == null) return false;
+          final due = DateTime(
+            t.dueDate!.year,
+            t.dueDate!.month,
+            t.dueDate!.day,
+          );
+          return due.isAfter(today);
+        default: // 'All' - Show active tasks (not completed) by default?
+          // Or show everything? usually 'All' means active in Todo apps.
+          // Let's toggle: 'All' -> Active, 'Completed' -> Completed.
+          if (_selectedFilter == 'All') return !t.isCompleted;
+          return true;
+      }
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     final tasksAsync = ref.watch(allTasksStreamProvider);
     final projectsAsync = ref.watch(projectsStreamProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('All Tasks'),
-        actions: [
-          PopupMenuButton<int>(
-            icon: Icon(
-              _groupingMode == 0
-                  ? LucideIcons.list
-                  : (_groupingMode == 1
-                        ? LucideIcons.folder
-                        : LucideIcons.arrowUpCircle),
-            ),
-            tooltip: 'Group by',
-            onSelected: (val) => setState(() => _groupingMode = val),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 0,
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.list, size: 18),
-                    SizedBox(width: 8),
-                    Text('No Grouping'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 1,
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.folder, size: 18),
-                    SizedBox(width: 8),
-                    Text('Group by Project'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 2,
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.arrowUpCircle, size: 18),
-                    SizedBox(width: 8),
-                    Text('Group by Priority'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: tasksAsync.when(
-        data: (tasks) {
-          if (tasks.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(LucideIcons.checkCircle, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('No tasks found'),
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          SliverAppBar(
+            title: const Text('Tasks'),
+            floating: true,
+            pinned: true,
+            forceElevated: innerBoxIsScrolled,
+            actions: [
+              PopupMenuButton<int>(
+                icon: const Icon(
+                  LucideIcons.arrowUpDown,
+                ), // Better icon for sorting/grouping
+                tooltip: 'Group by',
+                onSelected: (val) => setState(() => _groupingMode = val),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 0,
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.calendar, size: 18),
+                        SizedBox(width: 8),
+                        Text('Group by Date'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 1,
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.folder, size: 18),
+                        SizedBox(width: 8),
+                        Text('Group by Project'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 2,
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.flag, size: 18),
+                        SizedBox(width: 8),
+                        Text('Group by Priority'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 3,
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.list, size: 18),
+                        SizedBox(width: 8),
+                        Text('No Grouping'),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            );
-          }
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(110), // Search + Chips
+              child: Column(
+                children: [
+                  // Search Bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search tasks...',
+                        prefixIcon: const Icon(LucideIcons.search, size: 20),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 0,
+                          horizontal: 16,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.5),
+                      ),
+                      onChanged: (val) => setState(() => _searchQuery = val),
+                    ),
+                  ),
 
-          if (_groupingMode == 1) {
+                  // Filter Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        _FilterChip(
+                          label: 'All Active',
+                          isSelected: _selectedFilter == 'All',
+                          onTap: () => setState(() => _selectedFilter = 'All'),
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Today',
+                          isSelected: _selectedFilter == 'Today',
+                          onTap: () =>
+                              setState(() => _selectedFilter = 'Today'),
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Upcoming',
+                          isSelected: _selectedFilter == 'Upcoming',
+                          onTap: () =>
+                              setState(() => _selectedFilter = 'Upcoming'),
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Overdue',
+                          isSelected: _selectedFilter == 'Overdue',
+                          onTap: () =>
+                              setState(() => _selectedFilter = 'Overdue'),
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Completed',
+                          isSelected: _selectedFilter == 'Completed',
+                          onTap: () =>
+                              setState(() => _selectedFilter = 'Completed'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        body: tasksAsync.when(
+          data: (allTasks) {
+            final filteredTasks = _filterTasks(allTasks);
+
+            if (filteredTasks.isEmpty) {
+              return _buildEmptyState(theme);
+            }
+
             return projectsAsync.when(
               data: (projects) =>
-                  _buildGroupedByProjectList(context, tasks, projects),
+                  _buildTaskContent(context, filteredTasks, projects),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
+              error: (_, __) => const SizedBox(),
             );
-          } else if (_groupingMode == 2) {
-            return projectsAsync.when(
-              data: (projects) =>
-                  _buildGroupedByPriorityList(context, tasks, projects),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
-            );
-          }
-
-          return projectsAsync.when(
-            data: (projects) => _buildFlatList(context, tasks, projects, ref),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) => Center(child: Text('Error: $err')),
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, s) => Center(child: Text('Error: $e')),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            builder: (context) => const AddEditTaskBottomSheet(),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error loading tasks: $err')),
+        child: const Icon(LucideIcons.plus),
       ),
     );
   }
+
+  Widget _buildEmptyState(ThemeData theme) {
+    if (_searchQuery.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(LucideIcons.searchX, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              'No results for "$_searchQuery"',
+              style: theme.textTheme.titleMedium,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Contextual Empty States based on Filter
+    String message = 'No tasks found';
+    IconData icon = LucideIcons.checkCircle2;
+
+    switch (_selectedFilter) {
+      case 'Today':
+        message = 'No tasks due today!';
+        break;
+      case 'Overdue':
+        message = 'Great job! No overdue tasks.';
+        icon = LucideIcons.thumbsUp;
+        break;
+      case 'Completed':
+        message = 'No completed tasks yet.';
+        icon = LucideIcons.listTodo;
+        break;
+      case 'All':
+        message = 'You\'re all caught up!';
+        icon = LucideIcons.partyPopper;
+        break;
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 64,
+            color: theme.colorScheme.primary.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskContent(
+    BuildContext context,
+    List<Task> tasks,
+    List<Project> projects,
+  ) {
+    // 0: Date, 1: Project, 2: Priority, 3: None
+    switch (_groupingMode) {
+      case 0:
+        return _buildGroupedByDate(context, tasks, projects);
+      case 1:
+        return _buildGroupedByProject(context, tasks, projects);
+      case 2:
+        return _buildGroupedByPriority(context, tasks, projects);
+      default:
+        return _buildFlatList(context, tasks, projects);
+    }
+  }
+
+  // --- Grouping Implementations ---
 
   Widget _buildFlatList(
     BuildContext context,
     List<Task> tasks,
     List<Project> projects,
-    WidgetRef ref,
   ) {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80), // Bottom pad for FAB
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];
         final project = projects.firstWhereOrNull(
           (p) => p.id == task.projectId,
         );
-        return _TaskItemCard(task: task, projectName: project?.name);
+        return _TaskItemCard(
+          task: task,
+          projectName: project?.name,
+          key: ValueKey(task.id),
+          onToggleComplete: () => _toggleTask(task),
+          onDelete: () => _deleteTask(task),
+        );
       },
     );
   }
 
-  Widget _buildGroupedByProjectList(
+  Widget _buildGroupedByDate(
     BuildContext context,
     List<Task> tasks,
     List<Project> projects,
   ) {
-    // Map Project ID to Project Name for easy lookup
-    final projectMap = {for (var p in projects) p.id: p.name};
+    // Buckets: Overdue, Today, Tomorrow, Next 7 Days, Later, No Date
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final nextWeek = today.add(const Duration(days: 7));
 
-    // Group tasks by projectId
-    final groups = groupBy(tasks, (t) => t.projectId);
+    final groups = groupBy<Task, String>(tasks, (task) {
+      if (task.dueDate == null) return 'No Date';
+      final d = DateTime(
+        task.dueDate!.year,
+        task.dueDate!.month,
+        task.dueDate!.day,
+      );
 
-    // Sort keys (Project IDs) based on Project Name
-    final sortedProjectIds = groups.keys.toList()
-      ..sort((a, b) {
-        final nameA = projectMap[a] ?? 'Unknown Project';
-        final nameB = projectMap[b] ?? 'Unknown Project';
-        return nameA.compareTo(nameB);
-      });
+      if (d.isBefore(today)) return 'Overdue';
+      if (d.isAtSameMomentAs(today)) return 'Today';
+      if (d.isAtSameMomentAs(tomorrow)) return 'Tomorrow';
+      if (d.isBefore(nextWeek)) return 'Next 7 Days';
+      return 'Later';
+    });
+
+    // Custom Sort Order
+    final sortOrder = [
+      'Overdue',
+      'Today',
+      'Tomorrow',
+      'Next 7 Days',
+      'Later',
+      'No Date',
+    ];
+    final sortedKeys = groups.keys.toList()
+      ..sort((a, b) => sortOrder.indexOf(a).compareTo(sortOrder.indexOf(b)));
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: sortedProjectIds.length,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+      itemCount: sortedKeys.length,
       itemBuilder: (context, index) {
-        final projectId = sortedProjectIds[index];
-        final groupTasks = groups[projectId] ?? [];
-        final projectName = projectMap[projectId] ?? 'Unknown Project';
+        final key = sortedKeys[index];
+        final groupTasks = groups[key] ?? [];
+
+        Color headerColor;
+        if (key == 'Overdue')
+          headerColor = Colors.red;
+        else if (key == 'Today')
+          headerColor = Colors.amber.shade700;
+        else
+          headerColor = Theme.of(context).colorScheme.primary;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12, top: 4),
-              child: Row(
-                children: [
-                  const Icon(LucideIcons.folder, size: 18, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Text(
-                    projectName,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${groupTasks.length}',
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ...groupTasks.map(
-              (task) => _TaskItemCard(task: task, projectName: projectName),
-            ),
-            const SizedBox(height: 8),
+            _buildGroupHeader(context, key, groupTasks.length, headerColor),
+            ...groupTasks.map((t) {
+              final p = projects.firstWhereOrNull(
+                (proj) => proj.id == t.projectId,
+              );
+              return _TaskItemCard(
+                task: t,
+                projectName: p?.name,
+                key: ValueKey(t.id),
+                onToggleComplete: () => _toggleTask(t),
+                onDelete: () => _deleteTask(t),
+              );
+            }),
+            const SizedBox(height: 16),
           ],
         );
       },
     );
   }
 
-  Widget _buildGroupedByPriorityList(
+  // Reuse logic for Project & Priority but adapted to new signature
+  Widget _buildGroupedByProject(
     BuildContext context,
     List<Task> tasks,
     List<Project> projects,
   ) {
-    // Group tasks by priority
-    final groups = groupBy(tasks, (t) => t.priority);
-
-    // Sort keys: High (2) -> Medium (1) -> Low (0)
-    final sortedPriorities = groups.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+    final projectMap = {for (var p in projects) p.id: p.name};
+    final groups = groupBy(tasks, (t) => t.projectId);
+    final sortedKeys = groups.keys.toList()
+      ..sort((a, b) => (projectMap[a] ?? 'Z').compareTo(projectMap[b] ?? 'Z'));
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: sortedPriorities.length,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+      itemCount: sortedKeys.length,
       itemBuilder: (context, index) {
-        final priority = sortedPriorities[index];
-        final groupTasks = groups[priority] ?? [];
+        final pid = sortedKeys[index];
+        final groupTasks = groups[pid]!;
+        final name = projectMap[pid] ?? 'Unknown Project';
 
-        String priorityLabel;
-        Color priorityColor;
+        return Column(
+          children: [
+            _buildGroupHeader(context, name, groupTasks.length, null),
+            ...groupTasks.map(
+              (t) => _TaskItemCard(
+                task: t,
+                projectName: name,
+                key: ValueKey(t.id),
+                onToggleComplete: () => _toggleTask(t),
+                onDelete: () => _deleteTask(t),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildGroupedByPriority(
+    BuildContext context,
+    List<Task> tasks,
+    List<Project> projects,
+  ) {
+    final groups = groupBy(tasks, (t) => t.priority);
+    final sortedKeys = groups.keys.toList()
+      ..sort((a, b) => b.compareTo(a)); // High to Low
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+      itemCount: sortedKeys.length,
+      itemBuilder: (context, index) {
+        final priority = sortedKeys[index];
+        final groupTasks = groups[priority]!;
+
+        String label;
+        Color color;
         switch (priority) {
           case 2:
-            priorityLabel = 'High Priority';
-            priorityColor = Colors.red;
+            label = 'High Priority';
+            color = Colors.red;
             break;
           case 1:
-            priorityLabel = 'Medium Priority';
-            priorityColor = Colors.orange;
-            break;
-          case 0:
-            priorityLabel = 'Low Priority';
-            priorityColor = Colors.green;
+            label = 'Medium Priority';
+            color = Colors.orange;
             break;
           default:
-            priorityLabel = 'Unknown';
-            priorityColor = Colors.grey;
+            label = 'Low Priority';
+            color = Colors.green;
         }
 
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12, top: 4),
-              child: Row(
-                children: [
-                  Icon(LucideIcons.flag, size: 18, color: priorityColor),
-                  const SizedBox(width: 8),
-                  Text(
-                    priorityLabel,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: priorityColor,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: priorityColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${groupTasks.length}',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: priorityColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ...groupTasks.map((task) {
-              final project = projects.firstWhereOrNull(
-                (p) => p.id == task.projectId,
+            _buildGroupHeader(context, label, groupTasks.length, color),
+            ...groupTasks.map((t) {
+              final p = projects.firstWhereOrNull(
+                (pro) => pro.id == t.projectId,
               );
-              return _TaskItemCard(task: task, projectName: project?.name);
+              return _TaskItemCard(
+                task: t,
+                projectName: p?.name,
+                key: ValueKey(t.id),
+                onToggleComplete: () => _toggleTask(t),
+                onDelete: () => _deleteTask(t),
+              );
             }),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildGroupHeader(
+    BuildContext context,
+    String title,
+    int count,
+    Color? color,
+  ) {
+    final theme = Theme.of(context);
+    final headerColor = color ?? theme.colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, top: 8),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: headerColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: headerColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 12,
+                color: headerColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _TaskItemCard extends ConsumerWidget {
-  final Task task;
-  final String? projectName;
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-  const _TaskItemCard({required this.task, this.projectName});
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? null
+              : Border.all(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected
+                ? theme.colorScheme.onPrimary
+                : theme.colorScheme.onSurfaceVariant,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TaskItemCard extends StatelessWidget {
+  final Task task;
+  final String? projectName;
+  final VoidCallback onToggleComplete;
+  final VoidCallback onDelete;
+
+  const _TaskItemCard({
+    super.key,
+    required this.task,
+    this.projectName,
+    required this.onToggleComplete,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
 
     // Determine Status & Color based on Priority
     Color priorityColor;
-    String priorityLabel;
-    IconData priorityIcon;
-
     switch (task.priority) {
       case 2:
-        priorityColor = Colors.red;
-        priorityLabel = 'High';
-        priorityIcon = LucideIcons.arrowUp;
-        break;
+        priorityColor = Colors.redAccent;
+        break; // High
       case 0:
         priorityColor = Colors.green;
-        priorityLabel = 'Low';
-        priorityIcon = LucideIcons.arrowDown;
-        break;
+        break; // Low
       default:
-        priorityColor = Colors.orange;
-        priorityLabel = 'Med';
-        priorityIcon = LucideIcons.minus;
+        priorityColor = Colors.orange; // Medium
     }
 
     // Format Due Date
     String? deadlineText;
     Color? deadlineColor;
     if (task.dueDate != null) {
-      deadlineText = DateFormat('MMM d').format(task.dueDate!);
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final listDate = DateTime(
@@ -345,158 +699,229 @@ class _TaskItemCard extends ConsumerWidget {
       );
 
       if (listDate.isBefore(today) && !task.isCompleted) {
-        deadlineColor = Colors.red; // Overdue
-        deadlineText = '$deadlineText (Overdue)';
+        deadlineColor = theme.colorScheme.error; // Overdue
+        deadlineText =
+            'Overdue'; // Simpler text for compacted view, or formatted date
+        deadlineText = DateFormat(
+          'MMM d',
+        ).format(task.dueDate!); // Keep formatting
       } else if (listDate.isAtSameMomentAs(today)) {
-        deadlineColor = Colors.amber; // Today
+        deadlineColor = Colors.amber.shade700;
         deadlineText = 'Today';
       } else {
-        deadlineColor = colorScheme.outline;
+        deadlineColor = theme.colorScheme.outline;
+        deadlineText = DateFormat('MMM d').format(task.dueDate!);
       }
     }
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainer,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: colorScheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
+    return Dismissible(
+      key: ValueKey(task.id),
+      direction: DismissDirection.horizontal,
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.green.shade100,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
           children: [
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              visualDensity: VisualDensity.compact,
-              leading: Checkbox(
-                value: task.isCompleted,
-                onChanged: (val) {
-                  final updatedTask = task.copyWith(
-                    isCompleted: val ?? false,
-                    lastUpdated: DateTime.now(),
-                    isSynced: false,
-                  );
-                  ref.read(projectRepositoryProvider).updateTask(updatedTask);
-                },
-              ),
-              title: Text(
-                task.title,
-                style: TextStyle(
-                  decoration: task.isCompleted
-                      ? TextDecoration.lineThrough
-                      : null,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              subtitle: task.description != null && task.description!.isNotEmpty
-                  ? Text(
-                      task.description!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    )
-                  : null,
-              trailing: IconButton(
-                icon: const Icon(LucideIcons.trash2, size: 16),
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Delete Task'),
-                      content: const Text('Delete this task?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text(
-                            'Delete',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (confirm == true) {
-                    ref.read(projectRepositoryProvider).deleteTask(task.id);
-                  }
-                },
-              ),
-            ),
-            // Footer: Project, Priority, Deadline
-            Padding(
-              padding: const EdgeInsets.only(left: 64, right: 16, bottom: 4),
-              child: Row(
-                children: [
-                  // Project Name (if exists)
-                  if (projectName != null) ...[
-                    Icon(
-                      LucideIcons.folder,
-                      size: 12,
-                      color: colorScheme.outline,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      projectName!,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.outline,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-
-                  // Priority Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: priorityColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: priorityColor.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(priorityIcon, size: 10, color: priorityColor),
-                        const SizedBox(width: 2),
-                        Text(
-                          priorityLabel,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontSize: 10,
-                            color: priorityColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Deadline (if exists)
-                  if (deadlineText != null) ...[
-                    const Spacer(),
-                    Icon(LucideIcons.clock, size: 12, color: deadlineColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      deadlineText,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: deadlineColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ],
+            Icon(LucideIcons.checkCircle2, color: Colors.green.shade700),
+            const SizedBox(width: 8),
+            Text(
+              'Complete',
+              style: TextStyle(
+                color: Colors.green.shade700,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
+        ),
+      ),
+      secondaryBackground: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.red.shade100,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              'Delete',
+              style: TextStyle(
+                color: Colors.red.shade700,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(LucideIcons.trash2, color: Colors.red.shade700),
+          ],
+        ),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          // Swipe Right -> Complete
+          onToggleComplete();
+          return false; // Snap back, let stream update list
+        } else {
+          // Swipe Left -> Delete
+          return true; // Allow dismiss
+        }
+      },
+      onDismissed: (direction) {
+        if (direction == DismissDirection.endToStart) {
+          // Delete
+          onDelete();
+        }
+      },
+      child: Card(
+        elevation: 0,
+        margin: const EdgeInsets.only(bottom: 12),
+        color: theme.colorScheme.surfaceContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias, // For the left strip
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Priority Strip
+              Container(width: 4, color: priorityColor),
+              // Main Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  task.title,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    decoration: task.isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                    color: task.isCompleted
+                                        ? theme.colorScheme.outline
+                                        : null,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (task.description != null &&
+                                    task.description!.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      task.description!,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: theme.colorScheme.outline,
+                                          ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          // Checkbox (Optional, kept for explicit action)
+                          Transform.scale(
+                            scale: 0.9,
+                            child: Checkbox(
+                              visualDensity: VisualDensity.compact,
+                              value: task.isCompleted,
+                              shape: CircleBorder(),
+                              activeColor: priorityColor,
+                              onChanged: (val) => onToggleComplete(),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Footer Metadata
+                      Row(
+                        children: [
+                          if (projectName != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    LucideIcons.folder,
+                                    size: 10,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    projectName!,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+
+                          if (deadlineText != null) ...[
+                            Row(
+                              children: [
+                                Icon(
+                                  LucideIcons.clock,
+                                  size: 12,
+                                  color: deadlineColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  deadlineText,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: deadlineColor,
+                                    fontWeight:
+                                        deadlineColor == theme.colorScheme.error
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

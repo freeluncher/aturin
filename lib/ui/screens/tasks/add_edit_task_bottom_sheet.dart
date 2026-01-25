@@ -7,10 +7,10 @@ import '../../../core/providers.dart';
 import '../../../domain/models/task.dart';
 
 class AddEditTaskBottomSheet extends ConsumerStatefulWidget {
-  final String projectId;
+  final String? projectId; // Made optional
   final Task? task;
 
-  const AddEditTaskBottomSheet({super.key, required this.projectId, this.task});
+  const AddEditTaskBottomSheet({super.key, this.projectId, this.task});
 
   @override
   ConsumerState<AddEditTaskBottomSheet> createState() =>
@@ -24,6 +24,8 @@ class _AddEditTaskBottomSheetState
   late TextEditingController _descController;
   int _priority = 1; // 1: Medium
   DateTime? _selectedDueDate;
+  String?
+  _selectedProjectId; // To store selected project if widget.projectId is null
   bool _isLoading = false;
 
   @override
@@ -35,6 +37,7 @@ class _AddEditTaskBottomSheetState
     );
     _priority = widget.task?.priority ?? 1;
     _selectedDueDate = widget.task?.dueDate;
+    _selectedProjectId = widget.projectId ?? widget.task?.projectId;
   }
 
   @override
@@ -46,6 +49,12 @@ class _AddEditTaskBottomSheetState
 
   Future<void> _saveTask() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedProjectId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a project')));
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -55,7 +64,7 @@ class _AddEditTaskBottomSheetState
         // Create
         final newTask = Task(
           id: const Uuid().v4(),
-          projectId: widget.projectId,
+          projectId: _selectedProjectId!,
           title: _titleController.text.trim(),
           description: _descController.text.trim().isEmpty
               ? null
@@ -70,7 +79,9 @@ class _AddEditTaskBottomSheetState
         // Update
         final updatedTask = Task(
           id: widget.task!.id,
-          projectId: widget.projectId,
+          projectId:
+              widget.projectId ??
+              widget.task!.projectId, // Keep existing if editing
           title: _titleController.text.trim(),
           description: _descController.text.trim().isEmpty
               ? null
@@ -101,6 +112,8 @@ class _AddEditTaskBottomSheetState
 
   @override
   Widget build(BuildContext context) {
+    final projectsAsync = ref.watch(projectsStreamProvider);
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -119,6 +132,35 @@ class _AddEditTaskBottomSheetState
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
+
+            // Project Selector (Only if projectId not provided)
+            if (widget.projectId == null && widget.task == null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: projectsAsync.when(
+                  data: (projects) => DropdownButtonFormField<String>(
+                    value: _selectedProjectId,
+                    decoration: const InputDecoration(
+                      labelText: 'Project',
+                      prefixIcon: Icon(LucideIcons.folder),
+                    ),
+                    items: projects
+                        .map(
+                          (p) => DropdownMenuItem(
+                            value: p.id,
+                            child: Text(p.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) =>
+                        setState(() => _selectedProjectId = val),
+                    validator: (val) => val == null ? 'Required' : null,
+                  ),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, s) => Text('Error loading projects: $e'),
+                ),
+              ),
+
             TextFormField(
               controller: _titleController,
               decoration: const InputDecoration(labelText: 'Title'),

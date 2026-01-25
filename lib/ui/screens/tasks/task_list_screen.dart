@@ -45,12 +45,18 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   void _deleteTask(Task task) {
     ref.read(projectRepositoryProvider).deleteTask(task.id);
 
+    // Keep it explicit for high visibility
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Task deleted'),
+        backgroundColor: const Color(0xFF03DAC6), // As requested
+        content: const Text(
+          'Task deleted',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.normal),
+        ),
         action: SnackBarAction(
           label: 'Undo',
+          textColor: Colors.black,
           onPressed: () {
             ref.read(projectRepositoryProvider).updateTask(task);
           },

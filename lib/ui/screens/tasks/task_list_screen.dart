@@ -181,7 +181,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
               ),
             ],
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(110), // Search + Chips
+              preferredSize: const Size.fromHeight(
+                120,
+              ), // Search + Chips + Padding
               child: Column(
                 children: [
                   // Search Bar

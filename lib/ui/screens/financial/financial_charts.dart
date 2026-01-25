@@ -68,75 +68,82 @@ class _FinancialChartsState extends State<FinancialCharts> {
         child: Column(
           children: [
             // Controls
-            Row(
-              children: [
-                // View Mode Toggle
-                SegmentedButton<int>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 0,
-                      label: Text('Monthly'),
-                      icon: Icon(LucideIcons.calendarDays, size: 16),
+            // Controls
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  // View Mode Toggle
+                  SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 0,
+                        label: Text('Monthly'),
+                        icon: Icon(LucideIcons.calendarDays, size: 16),
+                      ),
+                      ButtonSegment(
+                        value: 1,
+                        label: Text('Yearly'),
+                        icon: Icon(LucideIcons.calendarRange, size: 16),
+                      ),
+                    ],
+                    selected: {_viewMode},
+                    onSelectionChanged: (Set<int> newSelection) {
+                      setState(() {
+                        _viewMode = newSelection.first;
+                      });
+                    },
+                    showSelectedIcon: false,
+                    style: ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: MaterialStateProperty.all(EdgeInsets.zero),
                     ),
-                    ButtonSegment(
-                      value: 1,
-                      label: Text('Yearly'),
-                      icon: Icon(LucideIcons.calendarRange, size: 16),
-                    ),
-                  ],
-                  selected: {_viewMode},
-                  onSelectionChanged: (Set<int> newSelection) {
-                    setState(() {
-                      _viewMode = newSelection.first;
-                    });
-                  },
-                  showSelectedIcon: false,
-                  style: ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: MaterialStateProperty.all(EdgeInsets.zero),
                   ),
-                ),
 
-                const Spacer(),
+                  const SizedBox(
+                    width: 16,
+                  ), // Replaced Spacer with fixed spacing
+                  // Dropdowns based on mode
+                  if (isMonthly) ...[
+                    // Month Dropdown
+                    DropdownButton<int>(
+                      value: _selectedMonth,
+                      underline: const SizedBox(),
+                      items: List.generate(12, (index) {
+                        return DropdownMenuItem(
+                          value: index + 1,
+                          child: Text(
+                            DateFormat(
+                              'MMMM',
+                            ).format(DateTime(2022, index + 1)),
+                          ),
+                        );
+                      }),
+                      onChanged: (val) {
+                        if (val != null) setState(() => _selectedMonth = val);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                  ],
 
-                // Dropdowns based on mode
-                if (isMonthly) ...[
-                  // Month Dropdown
+                  // Year Dropdown (Last 5 years)
                   DropdownButton<int>(
-                    value: _selectedMonth,
+                    value: _selectedYear,
                     underline: const SizedBox(),
-                    items: List.generate(12, (index) {
+                    items: List.generate(5, (index) {
+                      final year = DateTime.now().year - index;
                       return DropdownMenuItem(
-                        value: index + 1,
-                        child: Text(
-                          DateFormat('MMMM').format(DateTime(2022, index + 1)),
-                        ),
+                        value: year,
+                        child: Text(year.toString()),
                       );
                     }),
                     onChanged: (val) {
-                      if (val != null) setState(() => _selectedMonth = val);
+                      if (val != null) setState(() => _selectedYear = val);
                     },
                   ),
-                  const SizedBox(width: 8),
                 ],
-
-                // Year Dropdown (Last 5 years)
-                DropdownButton<int>(
-                  value: _selectedYear,
-                  underline: const SizedBox(),
-                  items: List.generate(5, (index) {
-                    final year = DateTime.now().year - index;
-                    return DropdownMenuItem(
-                      value: year,
-                      child: Text(year.toString()),
-                    );
-                  }),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _selectedYear = val);
-                  },
-                ),
-              ],
+              ),
             ),
 
             const SizedBox(height: 24),

@@ -4,9 +4,10 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 
 import '../../../domain/models/invoice.dart' as domain;
-import 'add_edit_invoice_sheet.dart'; // Added
-import '../../widgets/invoice_list_tile.dart'; // Shared Widget
+import 'add_edit_invoice_sheet.dart';
+import '../../widgets/invoice_list_tile.dart';
 import '../../../core/providers.dart';
+import 'financial_charts.dart';
 
 class FinancialScreen extends ConsumerStatefulWidget {
   const FinancialScreen({super.key});
@@ -222,7 +223,12 @@ class _FinancialScreenState extends ConsumerState<FinancialScreen>
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+
+              // Charts Section
+              FinancialCharts(invoices: invoices),
               const SizedBox(height: 24),
+
               _buildSummaryCard(
                 'Total Revenue (Paid)',
                 totalPaid,

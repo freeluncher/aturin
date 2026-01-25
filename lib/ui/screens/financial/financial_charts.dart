@@ -150,7 +150,7 @@ class _FinancialChartsState extends State<FinancialCharts> {
 
             // Chart
             AspectRatio(
-              aspectRatio: 1.5,
+              aspectRatio: 2.0,
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.spaceEvenly,

@@ -41,6 +41,16 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           );
         }
 
+        // Handle Stream Errors (e.g. Offline/Network issues)
+        if (snapshot.hasError) {
+          debugPrint('Auth Stream Error: ${snapshot.error}');
+          // Fallback: Check if we have a current session anyway
+          final currentUser = ref.read(authRepositoryProvider).currentUser;
+          if (currentUser != null) {
+            return const DashboardScreen();
+          }
+        }
+
         final user = snapshot.data;
         if (user != null) {
           return const DashboardScreen();
